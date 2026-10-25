@@ -1,3 +1,4 @@
+import { localizeError } from '../i18n/errors';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
 import { ancestorsOf } from '../../core/tree';
 import { ACTION_SHORTCUTS, formatShortcut, runAction } from '../actions';
@@ -149,7 +150,7 @@ export function SaveIndicator({ editing }: { editing: boolean }) {
         type="button"
         className="save-status is-error"
         role="alert"
-        title={t('topBar.saveError', { error: status.error ?? t('topBar.unknownError') })}
+        title={t('topBar.saveError', { error: localizeError(status.error ?? t('topBar.unknownError')) })}
         onClick={() => void getSession().flush()}
       >
         <AlertTriangle size={14} /> <span className="save-label">{t('topBar.saveFailed')}</span>

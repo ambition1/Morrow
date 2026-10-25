@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { dateKey, parseDateKey } from '../../core/daily';
 import { collectCards, dueCards, schedule } from '../../core/flashcards';
 import type { Card, Grade, ReviewLog } from '../../core/flashcards';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import { gradeCard, useReviewLog } from '../review';
 import { openPage } from '../router';
 import { useWorkspace } from '../workspace';

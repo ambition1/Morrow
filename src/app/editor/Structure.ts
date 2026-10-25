@@ -200,6 +200,10 @@ export function dateSuggestions(query: string, today = new Date()): Date[] {
   const at = (days: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
   const text = query.trim().toLowerCase();
   const all: Array<[string, Date]> = [
+    ['今天', at(0)],
+    ['明天', at(1)],
+    ['昨天', at(-1)],
+    ['下周', at(7)],
     ['today', at(0)],
     ['tomorrow', at(1)],
     ['yesterday', at(-1)],
@@ -208,6 +212,9 @@ export function dateSuggestions(query: string, today = new Date()): Date[] {
   for (let offset = 1; offset <= 7; offset++) {
     const date = at(offset);
     all.push([WEEKDAYS[date.getDay()]!, date]);
+    // 中文日期提及与英文关键字同时可用。
+    const weekday = '日一二三四五六'[date.getDay()]!;
+    all.push([`星期${weekday}`, date], [`周${weekday}`, date]);
   }
   const exact = parseDateKey(text);
   if (exact) return [exact];

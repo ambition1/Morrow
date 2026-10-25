@@ -1,7 +1,7 @@
 import { Check, ExternalLink, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { formatValue, formulaResult } from '../../../core/database';
-import { displayTitle } from '../../../core/model';
+import { displayTitle } from '../../i18n/labels';
 import { findPagesByTitle, resolveLinkTarget } from '../../../core/search';
 import { openPage } from '../../router';
 import { useWorkspace } from '../../workspace';

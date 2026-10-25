@@ -1,6 +1,31 @@
 import type { TranslationSchema } from '../types';
 
 export const es: TranslationSchema = {
+  boot: {
+    opening: 'Opening your workspace…',
+    failed: 'Could not open your workspace',
+    unchanged: 'Your saved data has not been changed.',
+    retry: 'Try again',
+    unreadable: '{count} items could not be read and were left untouched.',
+  },
+  web: {
+    shortcutsHelp: '{shortcutDaily} opens today’s note. Shortcuts work within this browser tab.',
+    loginTitle: 'Sign in to Morrow',
+    loginHelp: 'Your private vault, available on every device.',
+    username: 'Username',
+    password: 'Password',
+    login: 'Sign in',
+    loggingIn: 'Signing in…',
+    logout: 'Sign out',
+    account: 'Account',
+    accountHelp:
+      'Accounts are created by an administrator. Each account has a separate vault. Changes are saved before signing out.',
+    requestFailed: 'Request failed. Check the connection or sign in again.',
+    changed: 'Your vault changed on another device. Copy any unsaved content and reload before editing.',
+    storageName: 'Browser storage (IndexedDB)',
+    storageHelp:
+      'Pages, attachments and history are saved in this browser for this site. Clearing site data removes them. Export backups regularly. Desktop sync, assistant, MCP and native folders require the desktop app.',
+  },
   common: {
     showMore: 'Mostrar {count} más',
     expand: 'Expandir',
@@ -163,6 +188,11 @@ export const es: TranslationSchema = {
       colourfulPagesHelp: 'Títulos, listas, iconos y etiquetas coloreados.',
       writingTitle: 'Escritura',
       font: 'Fuente',
+      uiFont: 'Interface font',
+      writingFont: 'Custom writing font',
+      systemFont: 'System default',
+      fontHelp:
+        'Enter one installed font name, such as Microsoft YaHei. Leave empty to restore the default. Unavailable fonts fall back to the system font.',
       fonts: {
         serif: 'Serif',
         sans: 'Sans',
@@ -546,6 +576,7 @@ export const es: TranslationSchema = {
     pressEnterToAdd: 'Pulsa Enter para añadir',
   },
   editor: {
+    pageContent: 'Page content',
     diagramMistake: 'Este diagrama tiene un error: {error}',
     imageFrom: 'Imagen de {host}',
     imageNotFound: 'No se encontró la imagen: {src}',

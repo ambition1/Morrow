@@ -1,12 +1,12 @@
 import { Shuffle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId } from '../../core/model';
 import { closeDialog } from '../ui';
 import { useWorkspace } from '../workspace';
 import { Emoji, emojiSrc } from './Emoji';
 import { Dialog } from './primitives';
-import { t } from '../i18n';
+import { t, useTranslation } from '../i18n';
 import type { TranslationKey } from '../i18n';
 
 interface Emoji {
@@ -32,9 +32,15 @@ const GROUPS: Array<{ id: number; label: TranslationKey; icon: string }> = [
 const RECENT_KEY = 'morrow.recentEmoji';
 
 // the full list loads the first time the picker opens, it never weighs down the rest of the app
-let cache: Promise<Emoji[]> | null = null;
-function loadEmoji(): Promise<Emoji[]> {
-  cache ??= import('emojibase-data/en/compact.json').then((module) =>
+// 按语言缓存表情名称和搜索关键词。
+const cache = new Map<string, Promise<Emoji[]>>();
+function loadEmoji(locale: string): Promise<Emoji[]> {
+  const language = locale === 'zh-CN' ? 'zh' : 'en';
+  const cached = cache.get(language);
+  if (cached) return cached;
+  const loading = (
+    language === 'zh' ? import('emojibase-data/zh/compact.json') : import('emojibase-data/en/compact.json')
+  ).then((module) =>
     (module.default as Array<Partial<Emoji> & { unicode: string; label: string }>)
       .filter((item) => typeof item.group === 'number' && item.group !== 2 && emojiSrc(item.unicode) !== null)
       .map((item) => ({
@@ -46,7 +52,8 @@ function loadEmoji(): Promise<Emoji[]> {
       }))
       .sort((a, b) => a.order - b.order),
   );
-  return cache;
+  cache.set(language, loading);
+  return loading;
 }
 
 function readRecent(): string[] {
@@ -61,6 +68,7 @@ function readRecent(): string[] {
 }
 
 export function EmojiPicker({ pageId, onPick }: { pageId: PageId; onPick: (icon: string | null) => void }) {
+  const { locale } = useTranslation();
   const state = useWorkspace();
   const page = state.pages[pageId];
   const [emoji, setEmoji] = useState<Emoji[] | null>(null);
@@ -70,11 +78,11 @@ export function EmojiPicker({ pageId, onPick }: { pageId: PageId; onPick: (icon:
 
   useEffect(() => {
     let live = true;
-    void loadEmoji().then((list) => live && setEmoji(list));
+    void loadEmoji(locale).then((list) => live && setEmoji(list));
     return () => {
       live = false;
     };
-  }, []);
+  }, [locale]);
 
   const shown = useMemo(() => {
     if (!emoji) return [];

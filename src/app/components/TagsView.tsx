@@ -1,6 +1,6 @@
 import { Hash, Plus, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
 import { collectTags, pagesWithTag, tagColor } from '../../core/tags';
 import { ancestorsOf } from '../../core/tree';

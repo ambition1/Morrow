@@ -257,7 +257,7 @@ export function PairDialog() {
     if (result?.ok) {
       toast(t('toasts.pairedWithTurnSync', { name: result.name ?? '' }));
       closeDialog();
-    } else setError(result?.error ?? 'Pairing failed.');
+    } else setError(result?.error ?? t('settings.sync.syncFailed'));
   };
 
   return (

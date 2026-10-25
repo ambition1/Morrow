@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import { searchWorkspace } from '../../core/search';
 import type { SearchResult } from '../../core/search';
 import { navigate, openPage } from '../router';

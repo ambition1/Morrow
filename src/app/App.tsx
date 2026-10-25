@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
+import { applyFonts } from './platform/fonts';
 import { ACTIONS, matchesShortcut, runAction } from './actions';
 import { CommandPalette } from './components/CommandPalette';
 import { Dialogs } from './components/Dialogs';
@@ -286,6 +287,12 @@ export function App() {
   const prefs = usePreferences();
   const tabs = useTabs();
   useTheme(prefs.theme);
+  // 同步语言标记与字体，使设置立即影响整个界面。
+  useEffect(() => {
+    document.documentElement.lang = prefs.locale;
+    desktop?.setLocale?.(prefs.locale);
+    applyFonts({ uiFont: prefs.uiFont, writingFont: prefs.writingFont });
+  }, [prefs.locale, prefs.uiFont, prefs.writingFont]);
   useEffect(() => {
     document.documentElement.dataset.accent = prefs.accent;
     document.documentElement.dataset.colorful = prefs.colorful ? 'true' : 'false';

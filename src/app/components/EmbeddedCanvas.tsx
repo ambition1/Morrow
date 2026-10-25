@@ -1,6 +1,6 @@
 import { Maximize2 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId } from '../../core/model';
 import { isEffectivelyTrashed } from '../../core/tree';
 import { getPreferences, setPreferences, usePreferences } from '../platform/preferences';

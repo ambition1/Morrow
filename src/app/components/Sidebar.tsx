@@ -28,7 +28,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { dateKey } from '../../core/daily';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId, PageMeta, WorkspaceState } from '../../core/model';
 import { collectTasks } from '../../core/tasks';
 import {

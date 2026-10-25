@@ -87,6 +87,8 @@ export default defineConfig({
     thirdPartyLicenses(['@lobehub/fluent-emoji-3d']),
     emojiImages(),
   ],
+  // Web 开发请求转发到同源后端，生产环境由后端直接提供构建文件。
+  server: { proxy: { '/api': 'http://127.0.0.1:3000' } },
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   // relative base so the build loads from the desktop shell or any static path
   base: './',

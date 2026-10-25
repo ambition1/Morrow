@@ -1,6 +1,6 @@
 import type { en } from './locales/en';
 
-export type SupportedLocale = 'en' | 'es' | 'pt';
+export type SupportedLocale = 'en' | 'es' | 'pt' | 'zh-CN';
 
 export interface LocaleInfo {
   id: SupportedLocale;
@@ -8,6 +8,7 @@ export interface LocaleInfo {
 }
 
 export const SUPPORTED_LOCALES: LocaleInfo[] = [
+  { id: 'zh-CN', label: '简体中文' },
   { id: 'en', label: 'English' },
   { id: 'es', label: 'Español' },
   { id: 'pt', label: 'Português' },

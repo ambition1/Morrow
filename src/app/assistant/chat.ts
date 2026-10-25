@@ -1,6 +1,6 @@
 // the conversation with the assistant: one at a time, kept while morrow is open, never written to disk
 import { useSyncExternalStore } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import { commitEditors } from '../editor/commits';
 import { desktop } from '../platform/desktop';
 import { getPreferences } from '../platform/preferences';

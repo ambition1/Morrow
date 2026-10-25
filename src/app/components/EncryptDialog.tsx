@@ -1,6 +1,7 @@
+import { localizeError } from '../i18n/errors';
 import { Lock } from 'lucide-react';
 import { useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId, PageMeta } from '../../core/model';
 import { useTranslation } from '../i18n';
 import { closeDialog, toast } from '../ui';
@@ -106,7 +107,7 @@ export function LockedPage({ page }: { page: PageMeta }) {
     const result = await getSession().unlockPage(page.id, password);
     setBusy(false);
     if (!result.ok) {
-      setError(result.error);
+      setError(localizeError(result.error));
       setPassword('');
     }
   };

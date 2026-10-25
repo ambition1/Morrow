@@ -12,7 +12,7 @@ import { Network } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildGraph, DEFAULT_GRAPH_OPTIONS } from '../../core/graph';
 import type { GraphLink, GraphNode, GraphOptions } from '../../core/graph';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId } from '../../core/model';
 import { foldText } from '../../core/search';
 import { navigate, openPage } from '../router';

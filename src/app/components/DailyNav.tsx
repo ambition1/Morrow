@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { dateKey, daysWithNotes, neighbourNotes, pagesMadeOn, parseDateKey } from '../../core/daily';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
 import { openToday } from '../operations';
 import { openPage } from '../router';

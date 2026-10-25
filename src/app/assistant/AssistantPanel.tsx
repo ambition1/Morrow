@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { diffLines } from '../../core/diff';
 import type { DiffLine } from '../../core/diff';
 import { markdownToDoc } from '../../core/markdown/parse';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import { resolveLinkTarget } from '../../core/search';
 import { docToHtml } from '../../core/site';
 import { formatShortcut } from '../actions';

@@ -1,7 +1,10 @@
 :root {
   /* emoji typed in text use the system's colour emoji, page icons are drawn from bundled images instead */
   --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
-  --font-ui: 'Inter Variable', var(--font-emoji), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-system:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-ui:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-sans: 'Inter Variable', var(--font-emoji), system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-serif: 'Source Serif 4 Variable', var(--font-emoji), 'Iowan Old Style', Georgia, serif;
   --font-mono:

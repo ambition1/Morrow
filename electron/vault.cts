@@ -1,3 +1,4 @@
+import { nativeText } from './i18n.cjs';
 // file system access for the vault, every path is checked to stay inside the chosen folder
 import { app, clipboard, ClipboardItem, dialog, nativeImage, shell } from 'electron';
 import type { BrowserWindow } from 'electron';
@@ -110,13 +111,15 @@ export async function vaultState(): Promise<{
 }
 
 export async function selectVault(dir: string): Promise<{ ok: boolean; error?: string }> {
-  if (typeof dir !== 'string' || !path.isAbsolute(dir)) return { ok: false, error: 'Choose a folder.' };
+  if (typeof dir !== 'string' || !path.isAbsolute(dir))
+    return { ok: false, error: nativeText('Choose a folder.') };
   const resolved = path.resolve(dir);
-  if (!(await isDirectory(resolved))) return { ok: false, error: 'That folder does not exist any more.' };
+  if (!(await isDirectory(resolved)))
+    return { ok: false, error: nativeText('That folder does not exist any more.') };
   if (resolved === path.parse(resolved).root || resolved === app.getPath('home'))
     return {
       ok: false,
-      error: 'Choose a folder of its own for your notes, not your whole drive or home folder.',
+      error: nativeText('Choose a folder of its own for your notes, not your whole drive or home folder.'),
     };
   const list = await readVaultList();
   list.current = resolved;
@@ -137,8 +140,8 @@ export async function forgetVault(dir: string): Promise<void> {
 
 export async function chooseFolder(window: BrowserWindow | null, start?: unknown): Promise<string | null> {
   const options = {
-    title: 'Choose a folder for your notes',
-    buttonLabel: 'Use this folder',
+    title: nativeText('Choose a folder for your notes'),
+    buttonLabel: nativeText('Use this folder'),
     properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>,
     defaultPath:
       typeof start === 'string' && path.isAbsolute(start) && (await isDirectory(start))
@@ -153,12 +156,12 @@ export async function chooseFolder(window: BrowserWindow | null, start?: unknown
 export async function copyVaultInto(
   parent: unknown,
 ): Promise<{ ok: boolean; path?: string; error?: string }> {
-  if (!root) return { ok: false, error: 'No vault is open.' };
+  if (!root) return { ok: false, error: nativeText('No vault is open.') };
   if (typeof parent !== 'string' || !path.isAbsolute(parent) || !(await isDirectory(parent)))
-    return { ok: false, error: 'That folder does not exist.' };
+    return { ok: false, error: nativeText('That folder does not exist.') };
   const from = path.resolve(root);
   const into = path.resolve(parent);
-  if (isInside(into, from)) return { ok: false, error: 'Choose a folder outside this vault.' };
+  if (isInside(into, from)) return { ok: false, error: nativeText('Choose a folder outside this vault.') };
   let target = path.join(into, path.basename(from));
   for (let n = 2; await exists(target); n++) target = path.join(into, `${path.basename(from)} ${n}`);
   try {
@@ -213,18 +216,18 @@ export function currentVault(): string | null {
 
 // a vault relative path to an absolute one, refusing anything that would leave the vault
 function resolveInVault(relative: unknown): string {
-  if (!root) throw new Error('No vault is open.');
+  if (!root) throw new Error(nativeText('No vault is open.'));
   if (
     typeof relative !== 'string' ||
     relative.length === 0 ||
     relative.length > 4096 ||
     relative.includes('\0')
   )
-    throw new Error('Invalid path.');
-  if (path.isAbsolute(relative) || relative.includes('\\')) throw new Error('Invalid path.');
+    throw new Error(nativeText('Invalid path.'));
+  if (path.isAbsolute(relative) || relative.includes('\\')) throw new Error(nativeText('Invalid path.'));
   const absolute = path.resolve(root, relative);
   if (absolute !== root && !absolute.startsWith(root + path.sep))
-    throw new Error('That path is outside the vault.');
+    throw new Error(nativeText('That path is outside the vault.'));
   return absolute;
 }
 
@@ -234,7 +237,7 @@ async function checkReal(absolute: string): Promise<void> {
   while (!(await exists(dir))) dir = path.dirname(dir);
   const real = await realpath(dir);
   if (!realRoot || (real !== realRoot && !real.startsWith(realRoot + path.sep)))
-    throw new Error('That path is outside the vault.');
+    throw new Error(nativeText('That path is outside the vault.'));
 }
 
 const toRelative = (absolute: string) => path.relative(root!, absolute).split(path.sep).join('/');
@@ -243,7 +246,7 @@ const isHidden = (relative: string) =>
 const isPage = (relative: string) => /\.(md|canvas)$/i.test(relative);
 
 export async function scanVault(): Promise<unknown> {
-  if (!root) throw new Error('No vault is open.');
+  if (!root) throw new Error(nativeText('No vault is open.'));
   const files: Array<{ path: string; text: string; mtime: number; birthtime: number }> = [];
   const folders: Array<{ path: string; mtime: number; empty: boolean }> = [];
   const others: string[] = [];
@@ -325,7 +328,8 @@ async function applyOne(op: VaultOp): Promise<VaultOpResult> {
   switch (op.op) {
     case 'write': {
       const absolute = resolveInVault(op.path);
-      if (typeof op.text !== 'string') return { ok: false, code: 'error', message: 'Invalid text.' };
+      if (typeof op.text !== 'string')
+        return { ok: false, code: 'error', message: nativeText('Invalid text.') };
       if (op.expect !== undefined) {
         const current = await readTextOrNull(absolute);
         if (current !== op.expect)
@@ -365,7 +369,7 @@ async function applyOne(op: VaultOp): Promise<VaultOpResult> {
     case 'delete': {
       // only morrow's own bookkeeping is ever deleted outright, pages always go to the trash
       if (!op.path.startsWith('.morrow/'))
-        return { ok: false, code: 'error', message: 'Only Morrow files can be deleted.' };
+        return { ok: false, code: 'error', message: nativeText('Only Morrow files can be deleted.') };
       const absolute = resolveInVault(op.path);
       await rm(absolute, { force: true });
       return { ok: true };
@@ -380,12 +384,12 @@ async function applyOne(op: VaultOp): Promise<VaultOpResult> {
       return { ok: true };
     }
     default:
-      return { ok: false, code: 'error', message: 'Unknown operation.' };
+      return { ok: false, code: 'error', message: nativeText('Unknown operation.') };
   }
 }
 
 export async function applyOps(ops: unknown): Promise<VaultOpResult[]> {
-  if (!Array.isArray(ops)) return [{ ok: false, code: 'error', message: 'Invalid operations.' }];
+  if (!Array.isArray(ops)) return [{ ok: false, code: 'error', message: nativeText('Invalid operations.') }];
   const results: VaultOpResult[] = [];
   for (const op of ops as VaultOp[]) {
     let result: VaultOpResult;
@@ -417,8 +421,9 @@ export async function readBytes(relative: unknown): Promise<Uint8Array | null> {
 
 export async function createFile(relative: unknown, data: unknown): Promise<void> {
   const absolute = resolveInVault(relative);
-  if (!(data instanceof Uint8Array) && !(data instanceof ArrayBuffer)) throw new Error('Invalid file data.');
-  if (await exists(absolute)) throw new Error('A file with that name already exists.');
+  if (!(data instanceof Uint8Array) && !(data instanceof ArrayBuffer))
+    throw new Error(nativeText('Invalid file data.'));
+  if (await exists(absolute)) throw new Error(nativeText('A file with that name already exists.'));
   await writeAtomic(absolute, data instanceof ArrayBuffer ? new Uint8Array(data) : data);
 }
 
@@ -473,7 +478,7 @@ async function hashFile(absolute: string, size: number, mtime: number): Promise<
 
 // every synced file in the open vault with a hash of its bytes
 export async function vaultManifest(): Promise<Record<string, string>> {
-  if (!root) throw new Error('No vault is open.');
+  if (!root) throw new Error(nativeText('No vault is open.'));
   const manifest: Record<string, string> = {};
   let count = 0;
   const walk = async (dir: string, depth: number): Promise<void> => {
@@ -511,7 +516,7 @@ export async function writeSyncedFile(
   expectHash: unknown,
 ): Promise<VaultOpResult> {
   if (typeof relative !== 'string' || !isSyncedPath(relative) || typeof base64 !== 'string')
-    return { ok: false, code: 'error', message: 'Invalid file.' };
+    return { ok: false, code: 'error', message: nativeText('Invalid file.') };
   const absolute = resolveInVault(relative);
   const current = await readFile(absolute).catch(() => null);
   const currentHash = current ? createHash('sha256').update(current).digest('hex') : null;
@@ -523,7 +528,7 @@ export async function writeSyncedFile(
 
 // each vault has an id, so two computers only sync folders that are copies of the same vault
 export async function vaultIdentity(): Promise<{ id: string; name: string }> {
-  if (!root) throw new Error('No vault is open.');
+  if (!root) throw new Error(nativeText('No vault is open.'));
   const file = path.join(root, '.morrow', 'vault.json');
   try {
     const raw = JSON.parse(await readFile(file, 'utf8')) as { id?: unknown };
@@ -539,11 +544,12 @@ export async function vaultIdentity(): Promise<{ id: string; name: string }> {
 
 // prepares an empty folder to become a copy of a vault on another computer
 export async function prepareCopy(dir: string, vaultId: string): Promise<{ ok: boolean; error?: string }> {
-  if (!path.isAbsolute(dir) || !/^[\w-]{8,64}$/.test(vaultId)) return { ok: false, error: 'Invalid folder.' };
+  if (!path.isAbsolute(dir) || !/^[\w-]{8,64}$/.test(vaultId))
+    return { ok: false, error: nativeText('Invalid folder.') };
   const entries = await readdir(dir).catch(() => null);
-  if (entries === null) return { ok: false, error: 'That folder does not exist.' };
+  if (entries === null) return { ok: false, error: nativeText('That folder does not exist.') };
   if (entries.some((name) => !name.startsWith('.')))
-    return { ok: false, error: 'Choose an empty folder for the copy.' };
+    return { ok: false, error: nativeText('Choose an empty folder for the copy.') };
   await mkdir(path.join(dir, '.morrow'), { recursive: true });
   await writeFile(
     path.join(dir, '.morrow', 'vault.json'),

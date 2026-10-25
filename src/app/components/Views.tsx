@@ -1,6 +1,6 @@
 import { CheckSquare, RotateCcw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId, WorkspaceState } from '../../core/model';
 import { collectTasks } from '../../core/tasks';
 import type { TaskRef } from '../../core/tasks';

@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import { collectTasks } from '../../core/tasks';
 import { activityWeeks, dayLabel, onThisDay, rediscover, streak, totalWords } from '../../core/insights';
 import { docToPlainText } from '../../core/doc';
-import { COVER_GRADIENTS, displayTitle } from '../../core/model';
+import { COVER_GRADIENTS } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageMeta, WorkspaceState } from '../../core/model';
 import { ancestorsOf, livePages } from '../../core/tree';
 import { createPage, importMarkdown, openToday } from '../operations';
@@ -174,7 +175,8 @@ export function HomeView() {
             </p>
             <h1 className="home-greeting">
               {greeting(now, t)}
-              {prefs.name ? `, ${prefs.name}` : ''}.
+              {prefs.name ? `${prefs.locale === 'zh-CN' ? '，' : ', '}${prefs.name}` : ''}
+              {prefs.locale === 'zh-CN' ? '。' : '.'}
             </h1>
             <button type="button" className="button primary home-today" onClick={() => openToday()}>
               <CalendarDays size={15} /> {t('home.todayNote')}

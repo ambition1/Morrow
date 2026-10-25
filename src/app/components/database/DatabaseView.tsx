@@ -30,7 +30,8 @@ import {
   newView,
   valueOf,
 } from '../../../core/database';
-import { displayTitle, VIEW_TYPES } from '../../../core/model';
+import { VIEW_TYPES } from '../../../core/model';
+import { displayTitle } from '../../i18n/labels';
 import { unclaimedKeys } from '../../../core/properties';
 import { MAX_COLUMN_WIDTH, MIN_COLUMN_WIDTH } from '../../../core/migrations';
 import type {

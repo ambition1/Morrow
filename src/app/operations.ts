@@ -14,7 +14,7 @@ import type { ArchiveEntry } from '../core/importer';
 import { canvasDoc, emptyCanvas } from '../core/canvas';
 import type { Command } from '../core/commands';
 import { defaultDatabase } from '../core/database';
-import { displayTitle } from '../core/model';
+import { displayTitle } from './i18n/labels';
 import type { FileId, FileMeta, PageId, PageKind, Snapshot } from '../core/model';
 import { databaseFromSubpages, fieldsForMove, releaseRow } from '../core/properties';
 import { buildSite } from '../core/site';
@@ -49,7 +49,7 @@ import { navigate, openPage, parseRoute } from './router';
 import type { Route } from './router';
 import { getTabs } from './tabs';
 import type { PaneId } from './tabs';
-import { dateLocale, t } from './i18n';
+import { dateLocale, getLocale, t } from './i18n';
 import { confirmAction, setUi, toast } from './ui';
 import { getSession, getState, run, runAll } from './workspace';
 
@@ -172,7 +172,7 @@ export function ensureToday(date = new Date()): PageId | null {
       id: journalId,
       parentId: null,
       now,
-      title: JOURNAL_TITLE,
+      title: getLocale() === 'zh-CN' ? t('daily.dailyNotes') : JOURNAL_TITLE,
       kind: 'journal',
     });
     if (!created.ok) return null;
@@ -259,7 +259,11 @@ export function createTemplatesPage(): PageId | null {
     openPage(existing.id);
     return existing.id;
   }
-  const id = createPage({ title: TEMPLATES_TITLE, kind: 'templates', open: false });
+  const id = createPage({
+    title: getLocale() === 'zh-CN' ? t('dialogs.templates') : TEMPLATES_TITLE,
+    kind: 'templates',
+    open: false,
+  });
   if (!id) return null;
   expandPage(id);
   openPage(id);
@@ -327,7 +331,11 @@ export function saveAsTemplate(id: PageId): void {
 }
 
 function createTemplatesPageQuietly(): PageId | null {
-  return createPage({ title: TEMPLATES_TITLE, kind: 'templates', open: false });
+  return createPage({
+    title: getLocale() === 'zh-CN' ? t('dialogs.templates') : TEMPLATES_TITLE,
+    kind: 'templates',
+    open: false,
+  });
 }
 
 export function revealPage(id: PageId): void {

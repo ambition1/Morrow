@@ -1,5 +1,5 @@
 import { Maximize2 } from 'lucide-react';
-import { displayTitle } from '../../../core/model';
+import { displayTitle } from '../../i18n/labels';
 import type { PageId } from '../../../core/model';
 import { openPage } from '../../router';
 import { useWorkspace } from '../../workspace';

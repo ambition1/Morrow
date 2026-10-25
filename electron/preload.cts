@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('morrow', {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
+  // 将界面语言同步给原生菜单与文件选择框。
+  setLocale: (locale: string) => void ipcRenderer.invoke('morrow:locale', locale),
   setTheme: (theme: 'light' | 'dark') => ipcRenderer.send('morrow:theme', theme),
   dimTitleBar: (dim: boolean) => ipcRenderer.send('morrow:dim', dim),
   openExternal: (url: string) => ipcRenderer.invoke('morrow:open-external', url),

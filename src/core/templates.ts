@@ -18,8 +18,8 @@ export function listTemplates(state: WorkspaceState): PageMeta[] {
 
 export function dailyTemplate(state: WorkspaceState): PageMeta | null {
   return (
-    listTemplates(state).find(
-      (page) => page.title.trim().toLowerCase() === DAILY_TEMPLATE_TITLE.toLowerCase(),
+    listTemplates(state).find((page) =>
+      [DAILY_TEMPLATE_TITLE.toLowerCase(), '每日笔记'].includes(page.title.trim().toLowerCase()),
     ) ?? null
   );
 }

@@ -1,3 +1,4 @@
+import { nativeText } from './i18n.cjs';
 // new versions come from the github releases this repository publishes. only checked when the person
 // turned it on or pressed the button, and installed only when they say so
 import { app, net } from 'electron';
@@ -86,7 +87,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 // downloads the new version, checks it is the file github says it is, then hands over to it
 export async function installUpdate(onProgress: (share: number) => void): Promise<void> {
   const asset = latest?.asset;
-  if (!asset) throw new Error('There is no update to install.');
+  if (!asset) throw new Error(nativeText('There is no update to install.'));
   const response = await net.fetch(asset.browser_download_url);
   if (!response.ok || !response.body) throw new Error(`The download failed (${response.status}).`);
   const chunks: Uint8Array[] = [];
@@ -102,7 +103,7 @@ export async function installUpdate(onProgress: (share: number) => void): Promis
   const data = Buffer.concat(chunks);
   const expected = asset.digest?.startsWith('sha256:') ? asset.digest.slice(7).toLowerCase() : null;
   if (expected && createHash('sha256').update(data).digest('hex') !== expected)
-    throw new Error('The download did not match the release, so it was not installed.');
+    throw new Error(nativeText('The download did not match the release, so it was not installed.'));
 
   if (process.platform === 'win32') {
     const file = path.join(app.getPath('temp'), asset.name);
@@ -113,7 +114,7 @@ export async function installUpdate(onProgress: (share: number) => void): Promis
     return;
   }
   const target = process.env.APPIMAGE;
-  if (!target) throw new Error('This copy of Morrow can not update itself.');
+  if (!target) throw new Error(nativeText('This copy of Morrow can not update itself.'));
   const next = `${target}.update`;
   try {
     await writeFile(next, data);

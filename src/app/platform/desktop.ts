@@ -175,6 +175,8 @@ export interface DesktopBridge {
   version: string;
   dataPath: string;
   onCommand(listener: (id: string) => void): () => void;
+  // 原生菜单和对话框跟随界面语言。
+  setLocale?(locale: string): void;
   setTheme(theme: 'light' | 'dark'): void;
   dimTitleBar(dim: boolean): void;
   openExternal(url: string): Promise<void>;

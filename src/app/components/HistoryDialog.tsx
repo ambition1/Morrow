@@ -2,11 +2,11 @@ import { generateHTML } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { History } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { docToPlainText } from '../../core/doc';
+import { countWords, docToPlainText } from '../../core/doc';
 import { diffLines } from '../../core/diff';
 import type { DiffLine } from '../../core/diff';
 import { docToMarkdown } from '../../core/markdown/serialize';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId, Snapshot } from '../../core/model';
 import { createExtensions } from '../editor/extensions';
 import { restoreVersion } from '../operations';
@@ -100,7 +100,7 @@ export function HistoryDialog({ pageId }: { pageId: PageId }) {
         <div className="history-layout">
           <ul className="history-list" role="listbox" aria-label={t('history.versions')}>
             {versions.map((version, index) => {
-              const words = docToPlainText(version.doc).split(/\s+/).filter(Boolean).length;
+              const words = countWords(docToPlainText(version.doc));
               return (
                 <li key={version.id}>
                   <button

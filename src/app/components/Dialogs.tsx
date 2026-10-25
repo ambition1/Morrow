@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId } from '../../core/model';
 import { foldText } from '../../core/search';
 import { ancestorsOf, childrenOf, flattenTree, isDescendantOf } from '../../core/tree';

@@ -1,5 +1,7 @@
 # Morrow
 
+本分支支持简体中文、自定义系统字体和多人账号远程 Web 访问。部署步骤见 [Web 部署文档](docs/WEB部署.md)。
+
 Morrow is a free, open source, local first workspace for your notes, databases
 and ideas. Every page is a plain Markdown file in a folder you choose. No
 account, no subscription and no cloud, and no AI unless you bring your own. Just

@@ -2,7 +2,7 @@ import { CornerDownLeft, FileText, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { dialogOpened } from '../platform/desktop';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import { foldText, searchWorkspace } from '../../core/search';
 import type { SearchSnippet } from '../../core/search';
 import { ancestorsOf, livePages } from '../../core/tree';

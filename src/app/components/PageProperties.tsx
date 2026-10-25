@@ -1,7 +1,7 @@
 import { Columns3, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { stringify } from 'yaml';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { DatabaseDef, PageId, PageMeta, PropDef } from '../../core/model';
 import { inferFrontmatterType } from '../../core/properties';
 import { findKey, MANAGED_KEYS } from '../../core/vault/frontmatter';

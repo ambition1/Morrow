@@ -1,6 +1,6 @@
 // small facts about a workspace for the home page: streaks, activity, notes worth seeing again
 import { dateKey, parseDateKey } from './daily';
-import { docToPlainText } from './doc';
+import { countWords, docToPlainText } from './doc';
 import type { PageMeta, WorkspaceState } from './model';
 import { livePages } from './tree';
 
@@ -74,7 +74,7 @@ export function totalWords(state: WorkspaceState): number {
   let words = 0;
   for (const page of livePages(state.pages)) {
     const doc = state.docs[page.id];
-    if (doc) words += docToPlainText(doc).split(/\s+/).filter(Boolean).length;
+    if (doc) words += countWords(docToPlainText(doc));
   }
   return words;
 }

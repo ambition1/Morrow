@@ -1,6 +1,6 @@
 // names the core layer keeps in english, translated where they are shown
 import { VIEW_LABELS } from '../../core/database';
-import type { ColorName, FilterOp, PropType, ViewDef, ViewType } from '../../core/model';
+import type { ColorName, FilterOp, PageMeta, PropType, ViewDef, ViewType } from '../../core/model';
 import { t } from './index';
 import type { TranslationKey } from './types';
 
@@ -57,4 +57,9 @@ export const colorLabel = (color: ColorName): string => t(COLOR[color]);
 // a view still called by its english default shows that name translated, a name someone typed stays as typed
 export function viewName(view: Pick<ViewDef, 'name' | 'type'>): string {
   return !view.name || view.name === VIEW_LABELS[view.type] ? viewLabel(view.type) : view.name;
+}
+
+/** 在界面中显示页面标题，空标题使用当前语言。 */
+export function displayTitle(page: Pick<PageMeta, 'title'> | undefined): string {
+  return page?.title.trim() || t('page.untitled');
 }

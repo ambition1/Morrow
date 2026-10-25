@@ -1,5 +1,5 @@
 import { FilePlus2, LayoutTemplate } from 'lucide-react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId } from '../../core/model';
 import {
   DAILY_TEMPLATE_TITLE,
@@ -12,7 +12,7 @@ import { closeDialog } from '../ui';
 import { useWorkspace } from '../workspace';
 import { Dialog } from './primitives';
 import { PageIcon } from './Sidebar';
-import { t } from '../i18n';
+import { getLocale, t } from '../i18n';
 import { tr } from '../i18n/rich';
 
 export function TemplateDialog({ parentId }: { parentId: PageId | null }) {
@@ -26,11 +26,11 @@ export function TemplateDialog({ parentId }: { parentId: PageId | null }) {
           <LayoutTemplate size={24} strokeWidth={1.5} />
           <p>
             {tr('dialogs.templatesHelp', {
-              templates: TEMPLATES_TITLE,
+              templates: getLocale() === 'zh-CN' ? t('dialogs.templates') : TEMPLATES_TITLE,
               date: <code>{'{{date}}'}</code>,
               time: <code>{'{{time}}'}</code>,
               title: <code>{'{{title}}'}</code>,
-              daily: `“${DAILY_TEMPLATE_TITLE}”`,
+              daily: `“${getLocale() === 'zh-CN' ? t('daily.dailyNotes') : DAILY_TEMPLATE_TITLE}”`,
             })}
           </p>
           <button

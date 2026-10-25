@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { validateDoc } from '../../core/doc';
 import { markdownToDoc } from '../../core/markdown/parse';
 import { docToMarkdown } from '../../core/markdown/serialize';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { DocNode, FileMeta, PageId } from '../../core/model';
 import { resolveLinkTarget } from '../../core/search';
 import { getSession, getState, run } from '../workspace';

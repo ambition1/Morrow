@@ -1,7 +1,7 @@
 // makes the pages repeating templates are due for, when morrow opens and while it stays open
 import { dueRecurrences, LAST_KEY, periodStart, withRecurrence } from '../core/recurring';
 import type { Repeat } from '../core/recurring';
-import { displayTitle } from '../core/model';
+import { displayTitle } from './i18n/labels';
 import type { PageId } from '../core/model';
 import { applyTemplate, fillTemplate, hasPlaceholder } from '../core/templates';
 import { isEffectivelyTrashed } from '../core/tree';

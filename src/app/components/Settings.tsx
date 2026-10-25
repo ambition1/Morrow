@@ -17,6 +17,8 @@ import {
   unusedFiles,
 } from '../operations';
 import { formatBytes } from '../platform/attachments';
+import { commitEditors } from '../editor/commits';
+import { webRequest } from '../platform/webVault';
 import { desktop } from '../platform/desktop';
 import { ACCENTS, setPreferences, usePreferences } from '../platform/preferences';
 import type { PageWidth, StartPage, ThemePreference, WritingFont } from '../platform/preferences';
@@ -77,7 +79,9 @@ function Segmented<T extends string>({
 
 export function SettingsDialog({ section }: { section?: SettingsSection }) {
   const { t } = useTranslation();
-  const [current, setCurrent] = useState<SettingsSection>(section ?? 'general');
+  const [current, setCurrent] = useState<SettingsSection>(
+    !desktop && (section === 'assistant' || section === 'sync') ? 'general' : (section ?? 'general'),
+  );
   const shown = SECTIONS.find((item) => item.id === current) ?? SECTIONS[0]!;
   return (
     <Dialog
@@ -89,7 +93,7 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
     >
       <nav className="settings-nav" aria-label={t('settings.title')}>
         <p className="settings-nav-title">{t('settings.title')}</p>
-        {SECTIONS.map((item) => {
+        {SECTIONS.filter((item) => desktop || !['assistant', 'sync'].includes(item.id)).map((item) => {
           const Icon = item.icon;
           const label = t(item.key);
           return (
@@ -162,7 +166,7 @@ function GeneralSettings() {
       </SettingRow>
       <SettingRow
         label={t('settings.general.whenOpens')}
-        help={t('settings.general.whenOpensHelp', {
+        help={t(desktop ? 'settings.general.whenOpensHelp' : 'web.shortcutsHelp', {
           shortcutDaily: formatShortcut('Alt+D'),
           shortcutCapture: formatShortcut('Mod+Alt+M'),
         })}
@@ -240,11 +244,33 @@ function AppearanceSettings() {
             label={t('settings.appearance.font')}
             value={prefs.font}
             options={[
+              ['system', t('settings.appearance.themes.system')],
               ['serif', t('settings.appearance.fonts.serif')],
               ['sans', t('settings.appearance.fonts.sans')],
               ['mono', t('settings.appearance.fonts.mono')],
             ]}
             onChange={(font) => setPreferences({ font })}
+          />
+        </SettingRow>
+        {/* 字体名只作为 CSS 字符串处理，不接收任意 CSS 规则。 */}
+        <SettingRow label={t('settings.appearance.uiFont')} help={t('settings.appearance.fontHelp')}>
+          <input
+            className="input"
+            aria-label={t('settings.appearance.uiFont')}
+            placeholder={t('settings.appearance.systemFont')}
+            maxLength={200}
+            value={prefs.uiFont}
+            onChange={(event) => setPreferences({ uiFont: event.target.value })}
+          />
+        </SettingRow>
+        <SettingRow label={t('settings.appearance.writingFont')} help={t('settings.appearance.fontHelp')}>
+          <input
+            className="input"
+            aria-label={t('settings.appearance.writingFont')}
+            placeholder={t('settings.appearance.systemFont')}
+            maxLength={200}
+            value={prefs.writingFont}
+            onChange={(event) => setPreferences({ writingFont: event.target.value })}
           />
         </SettingRow>
         <SettingRow label={t('settings.appearance.pageWidth')}>
@@ -353,19 +379,50 @@ function VaultSettings() {
 
   return (
     <>
-      <SettingsGroup help={t('settings.vault.groupHelp')}>
+      {!desktop && (
+        <SettingsGroup help={t('web.accountHelp')}>
+          <SettingRow label={t('web.account')}>
+            <button
+              className="button small"
+              type="button"
+              onClick={() => {
+                commitEditors();
+                void getSession()
+                  .flush()
+                  .then(async (saved) => {
+                    if (!saved) {
+                      toast(t('topBar.saveFailed'), { tone: 'error' });
+                      return;
+                    }
+                    await webRequest('/api/logout', {
+                      method: 'POST',
+                      headers: { 'X-Morrow-User': sessionStorage.getItem('morrow.webUser') ?? '' },
+                    });
+                    window.location.reload();
+                  })
+                  .catch(() => toast(t('web.requestFailed'), { tone: 'error' }));
+              }}
+            >
+              {t('web.logout')}
+            </button>
+          </SettingRow>
+        </SettingsGroup>
+      )}
+      <SettingsGroup help={t(desktop ? 'settings.vault.groupHelp' : 'web.storageHelp')}>
         <SettingRow
           label={t('settings.vault.currentFolder')}
-          help={<span className="settings-path">{vault}</span>}
+          help={<span className="settings-path">{vault ?? t('web.storageName')}</span>}
         >
           {desktop?.vault && (
             <button type="button" className="button small" onClick={() => void desktop?.vault?.reveal('')}>
               {t('settings.vault.showFolder')}
             </button>
           )}
-          <button type="button" className="button small" onClick={() => void chooseVaultFolder()}>
-            {t('settings.vault.chooseAnother')}
-          </button>
+          {desktop?.vault && (
+            <button type="button" className="button small" onClick={() => void chooseVaultFolder()}>
+              {t('settings.vault.chooseAnother')}
+            </button>
+          )}
         </SettingRow>
         {legacy > 0 && (
           <SettingRow

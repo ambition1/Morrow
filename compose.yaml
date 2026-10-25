@@ -1,0 +1,17 @@
+# 功能：在服务器运行 Morrow，数据卷独立于容器生命周期。
+# 作者：xuanli
+# 创建时间：2026-10-25 23:44:46
+services:
+  morrow:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - morrow-data:/app/data
+    environment:
+      MORROW_HOST: 0.0.0.0
+      MORROW_DATA_DIR: /app/data
+      PORT: 3000
+volumes:
+  morrow-data:

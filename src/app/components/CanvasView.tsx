@@ -17,7 +17,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { canvasDoc, canvasFromDoc, CANVAS_COLORS } from '../../core/canvas';
 import type { CanvasData, CanvasEdge, CanvasNode, CanvasSide, CanvasStroke } from '../../core/canvas';
 import { docToPlainText } from '../../core/doc';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { DocNode, PageId } from '../../core/model';
 import { findPagesByTitle } from '../../core/search';
 import { isImagePath } from '../../core/vault/paths';

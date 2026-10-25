@@ -1,3 +1,4 @@
+import { localizeError } from './i18n/errors';
 import { useSyncExternalStore } from 'react';
 import type { PageId } from '../core/model';
 
@@ -112,7 +113,7 @@ export function toast(
   const id = ++toastId;
   const entry: Toast = {
     id,
-    message,
+    message: localizeError(message),
     tone: options.tone ?? 'info',
     ...(options.action ? { action: options.action } : {}),
   };

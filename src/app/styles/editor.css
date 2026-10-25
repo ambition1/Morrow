@@ -24,7 +24,7 @@
 }
 
 .font-sans .prose {
-  font-family: var(--font-ui);
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.68;
 }
@@ -803,4 +803,14 @@
   font-family: var(--font-mono);
   font-size: 0.75em;
   color: var(--text-faint);
+}
+
+/* 系统字体是默认正文样式；自定义字体统一覆盖三类正文及标题。 */
+.font-system .prose,
+.page.font-system .page-title {
+  font-family: var(--font-system);
+}
+:root[data-custom-writing-font='true'] .page .prose,
+:root[data-custom-writing-font='true'] .page .page-title {
+  font-family: var(--font-writing-custom);
 }

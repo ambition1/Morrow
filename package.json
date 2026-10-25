@@ -32,7 +32,13 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "dev:web": "vite --mode web --host 0.0.0.0",
+    "build:web": "tsc -p tsconfig.json && vite build --mode web",
+    "preview:web": "vite preview --host 0.0.0.0",
+    "start:web": "node server/index.mjs",
+    "user:create": "node server/index.mjs create-user",
+    "test:web": "node --test server/*.test.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
@@ -123,7 +129,8 @@
       "es",
       "es-419",
       "pt-BR",
-      "pt-PT"
+      "pt-PT",
+      "zh-CN"
     ],
     "win": {
       "target": [

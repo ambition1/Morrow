@@ -1,6 +1,6 @@
 import { Repeat as RepeatIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { PageId, PageMeta } from '../../core/model';
 import {
   INTO_KEY,

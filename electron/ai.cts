@@ -1,3 +1,4 @@
+import { nativeText } from './i18n.cjs';
 // the optional assistant: off until someone adds their own key. the key stays in this process,
 // encrypted by the system keychain, and the page only ever sees the conversation
 import Anthropic from '@anthropic-ai/sdk';
@@ -225,7 +226,7 @@ export async function listAiModels(): Promise<{ ok: boolean; models: string[]; e
   const stored = await load();
   const key = readKey(stored);
   const provider = providerOf(stored.provider);
-  if (provider.needsKey && !key) return { ok: false, models: [], error: 'Add an API key first.' };
+  if (provider.needsKey && !key) return { ok: false, models: [], error: nativeText('Add an API key first.') };
   try {
     if (provider.id === 'anthropic') {
       const client = new Anthropic({ apiKey: key! });
@@ -274,8 +275,8 @@ export async function aiTurn(request: TurnRequest): Promise<TurnResult> {
   const stored = await load();
   const key = readKey(stored);
   const provider = providerOf(stored.provider);
-  if (provider.needsKey && !key) return { ok: false, error: 'Add an API key in Settings first.' };
-  if (!stored.model) return { ok: false, error: 'Choose a model in Settings first.' };
+  if (provider.needsKey && !key) return { ok: false, error: nativeText('Add an API key in Settings first.') };
+  if (!stored.model) return { ok: false, error: nativeText('Choose a model in Settings first.') };
   const controller = new AbortController();
   running.set(request.id, controller);
   try {
@@ -417,7 +418,7 @@ async function compatibleTurn(
     }>;
   };
   const choice = body.choices?.[0];
-  if (!choice?.message) return { ok: false, error: 'The service sent back an empty reply.' };
+  if (!choice?.message) return { ok: false, error: nativeText('The service sent back an empty reply.') };
   const calls = (choice.message.tool_calls ?? []).map((call, index) => ({
     ...call,
     id: call.id || `call_${Date.now().toString(36)}_${index}`,

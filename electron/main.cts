@@ -1,3 +1,4 @@
+import { nativeText, setNativeLocale } from './i18n.cjs';
 import {
   app,
   BrowserWindow,
@@ -325,20 +326,20 @@ async function createWindow(): Promise<void> {
     }
     if (params.misspelledWord) {
       items.push({
-        label: 'Add to dictionary',
+        label: nativeText('Add to dictionary'),
         click: () => window.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
       });
       items.push({ type: 'separator' });
     }
     if (params.isEditable)
       items.push(
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
+        { label: nativeText('Cut'), role: 'cut' },
+        { label: nativeText('Copy'), role: 'copy' },
+        { label: nativeText('Paste'), role: 'paste' },
         { type: 'separator' },
-        { role: 'selectAll' },
+        { label: nativeText('Select All'), role: 'selectAll' },
       );
-    else if (params.selectionText) items.push({ role: 'copy' });
+    else if (params.selectionText) items.push({ label: nativeText('Copy'), role: 'copy' });
     if (items.length > 0) Menu.buildFromTemplate(items).popup({ window });
   });
 
@@ -441,7 +442,7 @@ function registerIpc(): void {
         .trim()
         .slice(0, 120) || 'Page';
     const choice = await dialog.showSaveDialog(window, {
-      title: 'Export as PDF',
+      title: nativeText('Export as PDF'),
       defaultPath: path.join(app.getPath('documents'), `${base}.pdf`),
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
     });
@@ -473,6 +474,12 @@ function registerIpc(): void {
 
 // the renderer reaches the vault only through these, each one checks the page asking is morrow itself
 function registerVaultIpc(): void {
+  // 原生界面语言仅允许由受信任的应用页面更新。
+  ipcMain.handle('morrow:locale', (event, value: unknown) => {
+    if (!fromApp(event)) return;
+    setNativeLocale(value);
+    if (process.platform === 'darwin') Menu.setApplicationMenu(buildMacMenu());
+  });
   const handle = (channel: string, fn: (...args: unknown[]) => unknown) =>
     ipcMain.handle(channel, async (event, ...args: unknown[]) => {
       if (!fromApp(event)) throw new Error('Not allowed.');
@@ -563,47 +570,67 @@ function buildMacMenu(): Menu {
     {
       label: app.name,
       submenu: [
-        { role: 'about' },
+        { label: nativeText('About'), role: 'about' },
         { type: 'separator' },
         // the renderer owns these shortcuts, the menu only shows them
         {
-          label: 'Settings…',
+          label: nativeText('Settings…'),
           accelerator: 'Cmd+,',
           registerAccelerator: false,
           click: send('view.settings'),
         },
         { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
+        { label: nativeText('Hide'), role: 'hide' },
+        { label: nativeText('Hide Others'), role: 'hideOthers' },
+        { label: nativeText('Show All'), role: 'unhide' },
         { type: 'separator' },
-        { role: 'quit' },
+        { label: nativeText('Quit'), role: 'quit' },
       ],
     },
     {
-      label: 'Edit',
+      label: nativeText('Edit'),
       submenu: [
-        { label: 'Undo', accelerator: 'Cmd+Z', registerAccelerator: false, click: send('edit.undo') },
-        { label: 'Redo', accelerator: 'Cmd+Shift+Z', registerAccelerator: false, click: send('edit.redo') },
+        {
+          label: nativeText('Undo'),
+          accelerator: 'Cmd+Z',
+          registerAccelerator: false,
+          click: send('edit.undo'),
+        },
+        {
+          label: nativeText('Redo'),
+          accelerator: 'Cmd+Shift+Z',
+          registerAccelerator: false,
+          click: send('edit.redo'),
+        },
         { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
+        { label: nativeText('Cut'), role: 'cut' },
+        { label: nativeText('Copy'), role: 'copy' },
+        { label: nativeText('Paste'), role: 'paste' },
+        { label: nativeText('Select All'), role: 'selectAll' },
       ],
     },
     {
       // cmd w closes the tab, the window closes with cmd shift w
-      label: 'Window',
+      label: nativeText('Window'),
       submenu: [
-        { label: 'New Tab', accelerator: 'Cmd+T', registerAccelerator: false, click: send('tab.new') },
-        { label: 'Close Tab', accelerator: 'Cmd+W', registerAccelerator: false, click: send('tab.close') },
-        { role: 'close', accelerator: 'Cmd+Shift+W' },
+        {
+          label: nativeText('New Tab'),
+          accelerator: 'Cmd+T',
+          registerAccelerator: false,
+          click: send('tab.new'),
+        },
+        {
+          label: nativeText('Close Tab'),
+          accelerator: 'Cmd+W',
+          registerAccelerator: false,
+          click: send('tab.close'),
+        },
+        { label: nativeText('Close'), role: 'close', accelerator: 'Cmd+Shift+W' },
         { type: 'separator' },
-        { role: 'minimize' },
-        { role: 'zoom' },
+        { label: nativeText('Minimize'), role: 'minimize' },
+        { label: nativeText('Zoom'), role: 'zoom' },
         { type: 'separator' },
-        { role: 'front' },
+        { label: nativeText('Bring All to Front'), role: 'front' },
       ],
     },
   ]);

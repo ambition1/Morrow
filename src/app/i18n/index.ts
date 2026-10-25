@@ -2,6 +2,7 @@ import { getPreferences, usePreferences } from '../platform/preferences';
 import { en } from './locales/en';
 import { es } from './locales/es';
 import { pt } from './locales/pt';
+import { zhCN } from './locales/zh-CN';
 import type { SupportedLocale, TranslationKey, TranslationParams, TranslationSchema } from './types';
 
 export * from './types';
@@ -10,6 +11,7 @@ const dictionaries: Record<SupportedLocale, TranslationSchema> = {
   en,
   es,
   pt,
+  'zh-CN': zhCN,
 };
 
 function resolvePath(obj: unknown, path: string): string | undefined {

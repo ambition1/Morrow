@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 import type { SupportedLocale } from '../i18n/types';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
-export type WritingFont = 'serif' | 'sans' | 'mono';
+export type WritingFont = 'system' | 'serif' | 'sans' | 'mono';
 export type PageWidth = 'comfortable' | 'wide';
 // what morrow shows when it opens: today's note, the home page, or where you left off
 export type StartPage = 'today' | 'home' | 'last';
@@ -20,6 +20,10 @@ export interface Preferences {
   locale: SupportedLocale;
   theme: ThemePreference;
   font: WritingFont;
+  // 自定义界面字体名，空字符串表示系统默认。
+  uiFont: string;
+  // 自定义正文字体名，空字符串表示使用所选字体分类。
+  writingFont: string;
   width: PageWidth;
   sidebarOpen: boolean;
   sidebarWidth: number;
@@ -46,19 +50,17 @@ export interface Preferences {
 
 const KEY = 'morrow.preferences';
 
+// 新安装默认使用简体中文；已保存的语言偏好仍保持有效。
 function defaultLocale(): SupportedLocale {
-  if (typeof navigator !== 'undefined') {
-    const lang = navigator.language?.toLowerCase() ?? '';
-    if (lang.startsWith('es')) return 'es';
-    if (lang.startsWith('pt')) return 'pt';
-  }
-  return 'en';
+  return 'zh-CN';
 }
 
 const defaults: Preferences = {
   locale: defaultLocale(),
   theme: 'system',
-  font: 'sans',
+  font: 'system',
+  uiFont: '',
+  writingFont: '',
   width: 'comfortable',
   sidebarOpen: true,
   sidebarWidth: 264,
@@ -96,11 +98,15 @@ function read(): Preferences {
     if (!raw) return defaults;
     const parsed = JSON.parse(raw) as Partial<Preferences>;
     return {
-      locale: ['en', 'es', 'pt'].includes(parsed.locale as SupportedLocale)
+      locale: ['en', 'es', 'pt', 'zh-CN'].includes(parsed.locale as SupportedLocale)
         ? (parsed.locale as SupportedLocale)
         : defaults.locale,
       theme: ['system', 'light', 'dark'].includes(parsed.theme as string) ? parsed.theme! : defaults.theme,
-      font: ['serif', 'sans', 'mono'].includes(parsed.font as string) ? parsed.font! : defaults.font,
+      font: ['system', 'serif', 'sans', 'mono'].includes(parsed.font as string)
+        ? parsed.font!
+        : defaults.font,
+      uiFont: typeof parsed.uiFont === 'string' ? parsed.uiFont.trim().slice(0, 200) : '',
+      writingFont: typeof parsed.writingFont === 'string' ? parsed.writingFont.trim().slice(0, 200) : '',
       width: parsed.width === 'wide' ? 'wide' : 'comfortable',
       sidebarOpen: parsed.sidebarOpen !== false,
       accent: ACCENTS.includes(parsed.accent as Accent) ? parsed.accent! : defaults.accent,

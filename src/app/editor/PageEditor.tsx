@@ -10,7 +10,8 @@ import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { docToMarkdown } from '../../core/markdown/serialize';
 import { docToHtml } from '../../core/site';
-import { displayTitle } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
+import { t } from '../i18n';
 import type { DocNode, PageId } from '../../core/model';
 import { findPagesByTitle, foldText, pageIdByTitle, resolveLinkTarget } from '../../core/search';
 import { ancestorsOf, isEffectivelyTrashed } from '../../core/tree';
@@ -252,7 +253,7 @@ export function PageEditor({ pageId, doc, editable, find, anchor, onExitTop, onD
       content: doc as JSONContent,
       editable,
       editorProps: {
-        attributes: { class: 'prose', 'aria-label': 'Page content', spellcheck: 'true' },
+        attributes: { class: 'prose', 'aria-label': t('editor.pageContent'), spellcheck: 'true' },
         clipboardTextSerializer: (slice) => plainTextOf(slice),
         handleDOMEvents: {
           // right click on a picture shows the same options as its handle, with copy and open

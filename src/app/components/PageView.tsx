@@ -12,9 +12,10 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { docToPlainText, findUnknownTypes, inlineText, isDocEmpty } from '../../core/doc';
+import { countWords, docToPlainText, findUnknownTypes, inlineText, isDocEmpty } from '../../core/doc';
 import { backlinksTo, unlinkedMentions } from '../../core/links';
-import { displayTitle, emptyDoc } from '../../core/model';
+import { emptyDoc } from '../../core/model';
+import { displayTitle } from '../i18n/labels';
 import type { DocNode, PageId, PageMeta } from '../../core/model';
 import { childrenOf, isEffectivelyTrashed } from '../../core/tree';
 import { findTemplatesPage } from '../../core/templates';
@@ -114,7 +115,7 @@ export function PageView({ id, find, anchor }: { id: PageId; find: string | null
   const doc = state.docs[id] ?? EMPTY_DOC;
 
   const menu = (): MenuEntry[] => {
-    const words = docToPlainText(doc).split(/\s+/).filter(Boolean).length;
+    const words = countWords(docToPlainText(doc));
     const info: MenuEntry = {
       heading: t('pageMenu.infoHeading', {
         words: words.toLocaleString(getLocale()),

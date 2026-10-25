@@ -27,6 +27,8 @@ import {
 } from './paths';
 
 export interface ScannedFile {
+  // 服务端跳过超限页面正文时，保留该页并设为不可写。
+  tooLarge?: boolean;
   path: string;
   text: string;
   mtime: number;
@@ -228,7 +230,7 @@ export function loadVault(scan: VaultScan, newId: () => string, now = Date.now()
     }
     texts.set(id, candidate.file.text);
     const label = candidate.file.path;
-    if (candidate.file.text.length > MAX_PAGE_BYTES) {
+    if (candidate.file.tooLarge || candidate.file.text.length > MAX_PAGE_BYTES) {
       unreadable.push(id);
       problems.push(`“${label}” is too large to edit in Morrow, so it is shown read only.`);
       pages.set(id, page);

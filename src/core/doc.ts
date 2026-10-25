@@ -139,3 +139,15 @@ export function remapFileIds(doc: DocNode, ids: ReadonlyMap<string, string>): Do
   };
   return visit(doc);
 }
+
+/** 统计字词数：汉字逐字计数，其他文字按空白分词，忽略纯标点。 */
+export function countWords(text: string): number {
+  /** 中文汉字数量，避免整段中文被统计为一个词。 */
+  const chinese = text.match(/\p{Script=Han}/gu)?.length ?? 0;
+  /** 移除汉字后，保留含字母或数字的其他词语。 */
+  const other = text
+    .replace(/\p{Script=Han}/gu, ' ')
+    .split(/\s+/)
+    .filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+  return chinese + other;
+}
