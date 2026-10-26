@@ -188,6 +188,8 @@ export const pt: TranslationSchema = {
       colourfulPagesHelp: 'Títulos, listas, ícones e etiquetas coloridos.',
       writingTitle: 'Escrita',
       font: 'Fonte',
+      uiFontHelp: 'Usada nos menus, na navegação e nas configurações.',
+      writingFontHelp: 'Usada nos títulos e no conteúdo; deixe em branco para usar a opção acima.',
       uiFont: 'Interface font',
       writingFont: 'Custom writing font',
       systemFont: 'System default',

@@ -1917,13 +1917,23 @@ input[type='checkbox']:checked::after {
 }
 
 /* 远程登录表单同时适配手机和桌面浏览器。 */
+.web-login-screen {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+.web-login-screen > * {
+  flex-shrink: 0;
+}
+.web-login-screen > .logo {
+  margin-top: auto;
+}
 .web-login {
   display: grid;
   gap: 16px;
-  width: min(340px, 85vw);
+  width: min(340px, 100%);
+  margin-bottom: auto;
   text-align: left;
 }
-.web-login label {
-  display: grid;
-  gap: 6px;
+.web-login .field-error {
+  overflow-wrap: anywhere;
 }

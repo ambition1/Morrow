@@ -238,7 +238,10 @@ function AppearanceSettings() {
           />
         </SettingRow>
       </SettingsGroup>
-      <SettingsGroup title={t('settings.appearance.writingTitle')}>
+      <SettingsGroup
+        title={t('settings.appearance.writingTitle')}
+        help={<span id="settings-font-help">{t('settings.appearance.fontHelp')}</span>}
+      >
         <SettingRow label={t('settings.appearance.font')}>
           <Segmented<WritingFont>
             label={t('settings.appearance.font')}
@@ -253,24 +256,42 @@ function AppearanceSettings() {
           />
         </SettingRow>
         {/* 字体名只作为 CSS 字符串处理，不接收任意 CSS 规则。 */}
-        <SettingRow label={t('settings.appearance.uiFont')} help={t('settings.appearance.fontHelp')}>
+        <SettingRow
+          label={t('settings.appearance.uiFont')}
+          help={<span id="settings-ui-font-help">{t('settings.appearance.uiFontHelp')}</span>}
+        >
           <input
-            className="input"
+            className="text-input small settings-input"
             aria-label={t('settings.appearance.uiFont')}
+            aria-describedby="settings-ui-font-help settings-font-help"
             placeholder={t('settings.appearance.systemFont')}
+            autoComplete="off"
+            spellCheck={false}
             maxLength={200}
             value={prefs.uiFont}
             onChange={(event) => setPreferences({ uiFont: event.target.value })}
+            onKeyDown={(event) =>
+              event.key === 'Enter' && !event.nativeEvent.isComposing && event.currentTarget.blur()
+            }
           />
         </SettingRow>
-        <SettingRow label={t('settings.appearance.writingFont')} help={t('settings.appearance.fontHelp')}>
+        <SettingRow
+          label={t('settings.appearance.writingFont')}
+          help={<span id="settings-writing-font-help">{t('settings.appearance.writingFontHelp')}</span>}
+        >
           <input
-            className="input"
+            className="text-input small settings-input"
             aria-label={t('settings.appearance.writingFont')}
+            aria-describedby="settings-writing-font-help settings-font-help"
             placeholder={t('settings.appearance.systemFont')}
+            autoComplete="off"
+            spellCheck={false}
             maxLength={200}
             value={prefs.writingFont}
             onChange={(event) => setPreferences({ writingFont: event.target.value })}
+            onKeyDown={(event) =>
+              event.key === 'Enter' && !event.nativeEvent.isComposing && event.currentTarget.blur()
+            }
           />
         </SettingRow>
         <SettingRow label={t('settings.appearance.pageWidth')}>

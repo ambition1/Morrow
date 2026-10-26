@@ -184,6 +184,8 @@ export const en = {
       colourfulPagesHelp: 'Coloured headings, lists, icons and tags.',
       writingTitle: 'Writing',
       font: 'Font',
+      uiFontHelp: 'Used for menus, navigation and settings.',
+      writingFontHelp: 'Used for page titles and content; leave empty to use the selection above.',
       uiFont: 'Interface font',
       writingFont: 'Custom writing font',
       systemFont: 'System default',

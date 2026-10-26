@@ -192,6 +192,8 @@ export const zhCN: TranslationSchema = {
       colourfulPagesHelp: '为标题、列表、图标和标签添加颜色。',
       writingTitle: '写作',
       font: '正文字体',
+      uiFontHelp: '用于菜单、侧边栏和设置。',
+      writingFontHelp: '用于页面标题和正文，留空使用上方选项。',
       uiFont: '界面字体',
       writingFont: '自定义正文字体',
       systemFont: '系统默认',

@@ -22,12 +22,14 @@ export function WebLogin() {
   /** 登录失败时的可见错误提示。 */
   const [error, setError] = useState('');
   return (
-    <div className="boot">
+    <div className="boot web-login-screen">
       <Logo size={36} />
       <h1>{t('web.loginTitle')}</h1>
       <p className="boot-text">{t('web.loginHelp')}</p>
       <form
         className="web-login"
+        aria-label={t('web.loginTitle')}
+        aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault();
           if (busy) return;
@@ -46,30 +48,42 @@ export function WebLogin() {
             .finally(() => setBusy(false));
         }}
       >
-        <label>
-          {t('web.username')}
+        <label className="field">
+          <span>{t('web.username')}</span>
           <input
-            className="input"
+            className="text-input"
+            name="username"
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'web-login-error' : undefined}
             required
             maxLength={48}
             value={username}
             onChange={(event) => setUsername(event.target.value)}
           />
         </label>
-        <label>
-          {t('web.password')}
+        <label className="field">
+          <span>{t('web.password')}</span>
           <input
-            className="input"
+            className="text-input"
+            name="password"
             type="password"
             autoComplete="current-password"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'web-login-error' : undefined}
             required
             maxLength={256}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
-        {error && <p role="alert">{error}</p>}
+        {error && (
+          <p id="web-login-error" className="field-error" role="alert">
+            {error}
+          </p>
+        )}
         <button className="button primary" type="submit" disabled={busy}>
           {t(busy ? 'web.loggingIn' : 'web.login')}
         </button>
