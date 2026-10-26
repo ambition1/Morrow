@@ -1,0 +1,14 @@
+# 功能：保留请求 Host，代理认证及文件接口，自动管理 HTTPS。
+# 作者：xuanli
+# 创建时间：2026-10-27 01:21:20
+{
+	email {$ACME_EMAIL}
+}
+
+{$MORROW_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 105MiB
+	}
+	reverse_proxy morrow:3000
+}

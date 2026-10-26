@@ -1,17 +1,41 @@
-# 功能：在服务器运行 Morrow，数据卷独立于容器生命周期。
+# 功能：持久化运行 Morrow，为已有 HTTPS 代理提供回环端口。
 # 作者：xuanli
 # 创建时间：2026-10-25 23:44:46
 services:
   morrow:
+    image: morrow-web:${MORROW_IMAGE_TAG:-local}
     build: .
+    init: true
     restart: unless-stopped
+    stop_grace_period: 60s
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: ${MORROW_MEMORY_LIMIT:-1g}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
     ports:
-      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:${MORROW_HTTP_PORT:-3000}:3000'
     volumes:
       - morrow-data:/app/data
     environment:
       MORROW_HOST: 0.0.0.0
       MORROW_DATA_DIR: /app/data
       PORT: 3000
+      MORROW_INSECURE_HTTP: '0'
+    healthcheck:
+      test: ['CMD', 'node', 'server/healthcheck.mjs']
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 volumes:
   morrow-data:

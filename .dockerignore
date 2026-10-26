@@ -6,3 +6,9 @@ release
 data
 .git
 *.local
+
+.env
+.env.*
+backups
+
+.deploy-locks/

@@ -2,6 +2,17 @@
 
 本分支支持简体中文、自定义系统字体和多人账号远程 Web 访问。部署步骤见 [Web 部署文档](docs/WEB部署.md)。
 
+## Docker Compose 远程部署
+
+```sh
+cp .env.example .env
+# 编辑 .env 中的域名与证书通知邮箱，然后运行：
+./scripts/deploy.sh https up
+./scripts/deploy.sh https user-add alice
+```
+
+包含 Caddy 自动 HTTPS、健康检查、独立账号数据卷、备份和空卷恢复。已有 HTTPS 反向代理可使用 `proxy` 模式，本机 HTTP 调试使用 `local` 模式。完整操作、升级回滚和本机数据迁移参见 [部署文档](docs/WEB部署.md)。
+
 Morrow is a free, open source, local first workspace for your notes, databases
 and ideas. Every page is a plain Markdown file in a folder you choose. No
 account, no subscription and no cloud, and no AI unless you bring your own. Just

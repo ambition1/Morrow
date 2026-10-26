@@ -5,7 +5,7 @@
  */
 import http from 'node:http';
 import path from 'node:path';
-import { promises as fs } from 'node:fs';
+import { constants, promises as fs } from 'node:fs';
 import { randomBytes, scrypt as derive, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -301,6 +301,16 @@ export async function createApp({ dataDir, distDir, secureCookie = true }) {
         request.headers['sec-fetch-site'] === 'cross-site')
     )
       throw failure(403, '禁止跨站请求。');
+    // 健康检查只返回状态，不暴露账号、文件路径或会话。
+    if (url.pathname === '/api/health' && request.method === 'GET') {
+      try {
+        await fs.access(path.join(publicRoot, 'index.html'), constants.R_OK);
+        await fs.access(dataRoot, constants.W_OK);
+        return json(response, 200, { ok: true });
+      } catch {
+        return json(response, 503, { ok: false });
+      }
+    }
     if (url.pathname === '/api/login' && request.method === 'POST') {
       /** 登录请求限制为 4 KB。 */
       const input = JSON.parse((await body(request, 4096)).toString());

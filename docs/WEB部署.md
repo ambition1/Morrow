@@ -1,29 +1,84 @@
-# Morrow 远程 Web 部署
+# Morrow Docker Compose 部署
 
-Web 版提供多人独立账号和独立笔记库。任意电脑通过 HTTPS 浏览器登录同一账号，即可访问该账号在服务器上的笔记。没有公开注册入口，管理员通过命令行创建账号。
+支持多人独立账号与笔记库。页面、附件、画布和历史记录保存在服务器的数据卷中，浏览器只负责访问。账号由管理员创建，无公开注册入口。
 
-## 使用 Docker Compose 部署
+## 文件与部署模式
 
-在服务器安装 Docker 和 Compose，将项目放入服务器目录后运行：
+| 文件                 | 用途                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| `compose.yaml`       | 应用、健康检查、数据卷、日志和运行限制；只发布服务器回环端口 |
+| `compose.https.yaml` | 增加 Caddy 自动 HTTPS、80/443 入口和证书持久化               |
+| `compose.local.yaml` | 本机 HTTP 调试，单独关闭 Secure Cookie                       |
+| `.env.example`       | 域名、端口、镜像标签和资源限制的配置示例                     |
+| `deploy/Caddyfile`   | HTTPS 代理，保留 Host 和 105 MiB 请求体限制                  |
+| `scripts/deploy.sh`  | 启停、账号管理、一致性备份、空卷恢复                         |
+
+脚本的三个模式：`https`（推荐正式部署）、`proxy`（已有 HTTPS 反向代理）、`local`（本机 HTTP）。模式不能混用，尤其不能在 HTTPS 部署中加载 `compose.local.yaml`。
+
+## 方案一：自带 HTTPS（推荐）
+
+### 1. 准备服务器
+
+需要 Docker Engine、Compose v2 或更新版本、Bash、tar 和 gzip。建议至少 2 GB 内存；构建与笔记库扫描会额外使用内存。应用默认容器内存上限为 1 GB，可在 `.env` 调整。
+
+准备一个独立域名，例如 `notes.example.com`，将 A 记录指向服务器；如果配置 AAAA，也必须正确指向服务器的 IPv6。放行 TCP 80、443；UDP 443 可用于 HTTP/3。公网不需要开放应用端口 3000。
+
+Caddy 会申请和续期证书，并将 HTTP 重定向到 HTTPS。域名解析、80/443 可达以及证书数据卷持久化是必要条件，详见 [Caddy 自动 HTTPS 文档](https://caddyserver.com/docs/automatic-https)。
+
+### 2. 获取项目并配置
 
 ```sh
-docker compose up -d --build
+git clone --branch codex/chinese-font-multiuser-web https://github.com/ambition1/Morrow.git
+cd Morrow
+# 首次部署执行；已有 .env 时直接编辑，避免覆盖原配置。
+cp .env.example .env
 ```
 
-服务默认发布在服务器的 `127.0.0.1:3000`。在前方配置 HTTPS 反向代理，客户端通过域名访问。不要直接将容器端口暴露到公网。
+编辑 `.env`，至少修改：
 
-创建账号（用户名为 3–48 位英文字母、数字、下划线或连字符，密码为 12–256 个字符）：
+```dotenv
+COMPOSE_PROJECT_NAME=morrow
+MORROW_IMAGE_TAG=initial
+MORROW_DOMAIN=notes.example.com
+ACME_EMAIL=admin@example.com
+```
+
+域名只填写主机名，不添加 `https://`、路径或端口。正式部署保持 Caddy 的默认对外端口 80/443。`.env` 不需要账号密码，也不会提交到 Git 或打进镜像。
+
+`COMPOSE_PROJECT_NAME` 决定数据卷前缀。已有部署不要随意改名，否则会连接到另一组空卷。升级旧版本时保持原项目名，可继续使用原来的 `morrow-data` 卷。
+
+### 3. 启动与建号
 
 ```sh
-read -s MORROW_USER_PASSWORD
-export MORROW_USER_PASSWORD
-docker compose exec -e MORROW_USER_PASSWORD morrow node server/index.mjs create-user alice
-unset MORROW_USER_PASSWORD
+./scripts/deploy.sh https up
+./scripts/deploy.sh https status
+./scripts/deploy.sh https user-add alice
 ```
 
-再执行一次并更换用户名即可创建其他账号。密码保存在带随机盐值的 scrypt 摘要中。账号不会因容器重建而丢失。
+启动命令会构建镜像并等待服务健康。账号命令在终端隐藏输入密码并要求确认；用户名为 3–48 位英文字母、数字、下划线或连字符，密码为 12–256 个字符。账号保存为带随机盐值的 scrypt 摘要。
 
-以下为 Nginx 的代理配置片段，放入已有证书配置的 HTTPS `server` 中。将域名替换为你的实际域名，证书由服务器的证书管理工具配置：
+再执行 `user-add bob` 即可创建独立账号。使用 `https://notes.example.com` 登录。
+
+不用脚本时，对应启动命令是：
+
+```sh
+docker compose -f compose.yaml -f compose.https.yaml up -d --build --wait
+```
+
+应用健康后才会启动网关。该顺序使用 Compose 的 `service_healthy` 条件，参见 [Docker 官方说明](https://docs.docker.com/compose/how-tos/startup-order/)。
+
+## 方案二：已有 Nginx、宝塔或其他 HTTPS 代理
+
+不启动内置网关：
+
+```sh
+./scripts/deploy.sh proxy up
+./scripts/deploy.sh proxy user-add alice
+```
+
+应用默认监听服务器的 `127.0.0.1:3000`。现有 HTTPS 站点反向代理到该地址；若端口被占用，在 `.env` 修改 `MORROW_HTTP_PORT`。
+
+Nginx 的 HTTPS `server` 配置片段：
 
 ```nginx
 server_name notes.example.com;
@@ -36,72 +91,181 @@ location / {
 }
 ```
 
-HTTP 入口应重定向至 HTTPS。认证 Cookie 默认带 `Secure`、`HttpOnly` 和 `SameSite=Strict`，正式部署必须使用 HTTPS。站点部署在域名根路径；目前没有子路径配置。
+HTTP 站点需重定向到 HTTPS。必须保留浏览器原始 Host（包括非默认端口），否则登录和保存可能因跨站检查返回 403。应用部署在域名根路径，不支持子路径。
 
-## 不使用 Docker
+## 本机 HTTP 调试
 
-需要 Node.js 24 或更新版本，以及安装前端依赖所需的 npm。
+```sh
+# 端口被占用时，先在 .env 设置 MORROW_HTTP_PORT=3189。
+./scripts/deploy.sh local up
+./scripts/deploy.sh local user-add local
+```
+
+打开 `http://localhost:3000`（或配置的端口）。只有 `local` 模式关闭 Secure Cookie；`proxy` 与 `https` 模式始终保留。基础配置的应用端口绑定回环地址，不会把本机调试入口暴露到局域网或公网。
+
+本机已有 Node 服务与容器是两个独立实例。不要让两者同时操作同一个笔记库目录。
+
+## 数据实际存放在哪里
+
+应用数据挂载在容器的 `/app/data`：
+
+```text
+/app/data/
+├── accounts/                 # 账号摘要
+│   ├── alice.json
+│   └── bob.json
+└── vaults/                   # 每个账号独立的笔记库
+    ├── alice/
+    │   ├── 页面.md
+    │   ├── attachments/
+    │   ├── .morrow/          # 注册信息、历史、样式、复习进度等
+    │   └── .trash/
+    └── bob/
+```
+
+Docker 卷默认名为 `morrow_morrow-data`；前面的 `morrow` 来自项目名。查看实际卷名与挂载位置：
+
+```sh
+docker compose ps
+docker inspect "$(docker compose ps -q morrow)" --format '{{json .Mounts}}'
+docker volume inspect morrow_morrow-data
+```
+
+Docker Desktop/OrbStack 的卷通常位于虚拟机内，不能当作项目下的普通文件夹使用。容器重建、停止和普通 `down` 都保留数据卷。不要执行 `down -v` 或手动删除这些卷来更新应用。
+
+HTTPS 模式另有 `caddy-data` 和 `caddy-config` 卷，分别保存证书状态与网关配置状态；也应保留。应用数据备份脚本只备份 `morrow-data`。服务器级备份可额外快照网关卷。
+
+## 备份
+
+```sh
+./scripts/deploy.sh https backup
+# 或指定目标文件；不会覆盖已有文件。
+./scripts/deploy.sh https backup /srv/backups/morrow-before-update.tar.gz
+```
+
+备份包含全部账号、笔记、附件、历史、回收站和自定义样式。脚本会先优雅停止应用以保证一致性；备份前正在运行才会在结束后自动启动。遇到打包失败也会尝试恢复原先运行状态，并移除不完整的临时文件。
+
+备份期间网关可能短暂返回 502。备份放在项目 `backups/` 或指定目录，权限限制为当前用户可读写。请复制到独立存储，避免服务器故障时连同数据卷一起丢失。
+
+需要迁移窗口保持停止时，先执行 `stop` 再执行 `backup`，脚本不会重新启动已经停止的实例：
+
+```sh
+./scripts/deploy.sh https stop
+./scripts/deploy.sh https backup /srv/backups/morrow-migration.tar.gz
+```
+
+## 恢复与迁移
+
+恢复脚本只允许**没有运行应用、且数据卷为空**的目标。不会清空或覆盖原有卷。只恢复管理员自己生成的可信 tar.gz；界面导出的 JSON 备份仍应通过界面“恢复备份”导入。
+
+例如恢复到一个新项目：
+
+```sh
+COMPOSE_PROJECT_NAME=morrow-restored ./scripts/deploy.sh https restore /srv/backups/morrow-migration.tar.gz
+```
+
+此时数据位于 `morrow-restored_morrow-data`，还没有启动正式服务。可以先在回环测试端口验证：
+
+```sh
+COMPOSE_PROJECT_NAME=morrow-restored MORROW_HTTP_PORT=3100 ./scripts/deploy.sh local up
+# 仅从服务器本机或 SSH 端口转发访问 http://localhost:3100，验证账号和笔记。
+COMPOSE_PROJECT_NAME=morrow-restored MORROW_HTTP_PORT=3100 ./scripts/deploy.sh local down
+```
+
+正式切换时，先 `down` 原 HTTPS 项目（不加 `-v`），将 `.env` 中的项目名改成 `morrow-restored`，再执行 `./scripts/deploy.sh https up`。原卷仍保留，确认恢复完整后再自行决定清理。此处改名是一次明确的数据迁移，不是普通升级操作。
+
+迁移到另一台服务器时，复制代码、`.env` 和备份文件，在空目标卷执行相同恢复流程，然后更新 DNS。避免迁移期间两台服务器同时接收编辑。
+
+### 将当前本机 `data/` 迁移进 Docker
+
+容器不会自动读取项目现有的 `data/`。先停止直接运行的 Node 服务，在项目目录执行：
+
+```sh
+mkdir -p backups
+# 备份应在停止写入后生成，目录内要同时包含 accounts/ 与 vaults/。
+tar -C data -czf backups/from-local.tar.gz .
+COMPOSE_PROJECT_NAME=morrow-imported ./scripts/deploy.sh https restore backups/from-local.tar.gz
+```
+
+验证后将 `.env` 项目名切换为 `morrow-imported` 并启动。账号密码保持不变，不需要重新建号。
+
+## 更新与回滚
+
+更新前备份，记录当前 Git 提交和 `.env` 的镜像标签。为每次发布使用不同的 `MORROW_IMAGE_TAG`，保留旧镜像。
+
+```sh
+./scripts/deploy.sh https backup
+# 获取并检查目标提交后再切换；不要覆盖服务器上未提交的配置修改。
+git fetch origin
+git switch codex/chinese-font-multiuser-web
+git pull --ff-only
+# 编辑 .env，为 MORROW_IMAGE_TAG 设置一个新的标签。
+./scripts/deploy.sh https up
+./scripts/deploy.sh https status
+```
+
+会话保存在进程内，应用重启后用户需要重新登录。更新不会删除账号或笔记。
+
+回滚到已保留的镜像时，在 `.env` 恢复旧标签，**不要重新构建**：
+
+```sh
+./scripts/deploy.sh https rollback
+```
+
+回滚镜像必须兼容对应版本的 Compose 健康检查配置；跨部署配置版本回滚时，应一起使用旧提交中的配置和脚本。
+
+若更新包含数据格式迁移，需使用升级前的数据备份恢复到新卷，并按恢复流程切换，不能假定旧代码支持新版数据。
+
+## 操作互斥
+
+`up`、`rollback`、`stop`、`down`、`user-add`、`backup`、`restore` 按 Compose 实际项目名互斥；服务恢复完成后才释放锁。请从同一份代码目录统一使用脚本管理，不要让定时任务、人工操作和另一份代码副本绕过脚本同时修改同一实例。
+
+锁位于 `.deploy-locks/<项目名>/`，记录发起操作的进程 PID。正常退出、失败和常规终止信号均会清理锁。机器断电或强制杀进程可能留下锁；不要直接重试覆盖。先确认记录的进程及该项目的临时备份/恢复容器都已退出，再手动清理残留锁目录。`status` 和 `logs` 不阻塞修改操作。
+
+## 运维和故障排查
+
+```sh
+./scripts/deploy.sh https status
+./scripts/deploy.sh https logs
+# 单独查看应用或证书日志：
+docker compose -f compose.yaml -f compose.https.yaml logs --tail 100 morrow caddy
+# 不涉及任何笔记或账号的健康接口：
+curl -f https://notes.example.com/api/health
+```
+
+| 现象                    | 检查                                                            |
+| ----------------------- | --------------------------------------------------------------- |
+| 证书申请失败            | 域名 A/AAAA、TCP 80/443、防火墙、其他进程端口占用及 Caddy 日志  |
+| HTTP 登录后不能保持会话 | 正式模式 Cookie 只在 HTTPS 发送；本机调试使用 `local` 模式      |
+| 登录或保存返回 403      | 代理是否保留原始 Host，是否跨域或放在子路径下                   |
+| 页面显示空笔记库        | 账号、Compose 项目名、挂载的数据卷是否与原部署一致              |
+| 应用 unhealthy          | `/api/health`、构建文件是否存在、数据卷权限、内存限制及应用日志 |
+| 保存提示其他设备更新    | 先保留未保存内容再刷新；单账号不提供实时协同编辑                |
+| 恢复被拒绝              | 目标应用仍在运行或卷已非空；换新项目名恢复，不删除原数据        |
+
+健康检查会验证静态入口可读及数据目录可写，返回内容只有 `{"ok":true}`。Compose 的健康状态用于启动等待和诊断，**unhealthy 本身不会自动重启仍在运行的进程**；异常退出由 `unless-stopped` 重启。
+
+应用以非 root 用户运行，根文件系统只读，只有数据卷和临时目录可写；日志按 10 MB × 3 轮转。`stop_grace_period` 给保存请求留出结束时间。这里只支持一个应用实例写入同一卷，不能横向扩容或同时让外部程序编辑服务器笔记。
+
+## 非容器开发
 
 ```sh
 ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci
 npm run build:web
-MORROW_DATA_DIR=/srv/morrow/data npm run start:web
+MORROW_INSECURE_HTTP=1 PORT=3188 npm run start:web
 ```
 
-请使用 systemd 等进程管理器运行服务，并让服务账号对数据目录拥有读写权限。默认监听 `127.0.0.1:3000`，仍需要 HTTPS 反向代理。
+直接运行时默认使用项目 `data/`，可通过 `MORROW_DATA_DIR` 修改。创建账号使用相同数据目录的 `npm run user:create -- 用户名`，密码由 `MORROW_USER_PASSWORD` 环境变量传入。`dev:web` 的 API 默认代理到 3000；`preview:web` 只有静态预览，不包含认证和文件 API。
 
-创建账号时必须使用与服务相同的数据目录：
+## 已完成的本地部署验收
 
-```sh
-read -s MORROW_USER_PASSWORD
-export MORROW_USER_PASSWORD
-MORROW_DATA_DIR=/srv/morrow/data npm run user:create -- alice
-unset MORROW_USER_PASSWORD
-```
+已在独立 Compose 项目和数据卷中验证，未操作开发中的笔记库：
 
-## 本机开发与验收
+- 三种 Compose 配置可解析；应用非 root、只读根文件系统下健康启动、建号与读写正常。
+- 中文页面、附件和账号在容器强制重建后保留。
+- 运行实例可一致性备份，并在结束后重启；原先停止的实例不会被意外启动。
+- 备份恢复至新项目的空卷后，原账号、页面与附件可正常读取；非空卷恢复被拒绝。
+- 占用项目锁时修改操作被拒绝；故障注入导致打包失败时，临时文件和锁被清理，原服务重新启动。
+- Caddy 使用本地 CA 的 TLS 证书通过信任链校验；HTTPS 登录的 Secure Cookie、附件与中文读写正常，HTTP 返回 308，错误 Origin 返回 403。
 
-首次构建、创建测试账号后启动本机 HTTP 服务：
-
-```sh
-npm run build:web
-# 先按照上一节方式创建账号，省略 MORROW_DATA_DIR 时默认为项目 data/。
-MORROW_INSECURE_HTTP=1 npm run start:web
-```
-
-打开 `http://localhost:3000`。本机 HTTP 调试才使用 `MORROW_INSECURE_HTTP=1`。如需前端热更新，在另一个终端运行 `npm run dev:web`，Vite 会把 `/api` 转发至 3000 端口。
-
-`npm run preview:web` 只能预览静态文件，不包含认证与存储 API，实际使用请运行 `start:web`。
-
-验证命令：
-
-```sh
-npm run typecheck
-npm run lint
-npm test
-npm run test:web
-npm run build:web
-```
-
-## 存储与备份
-
-- `MORROW_DATA_DIR/accounts/<用户名>.json`：账号摘要，服务端专用，不能作为静态文件发布。
-- `MORROW_DATA_DIR/vaults/<用户名>/`：该账号的 Markdown 页面、画布、附件和 `.morrow` 历史等元数据。
-- Docker 使用 `morrow-data` 数据卷；更新时使用 `docker compose up -d --build`，不要使用 `down -v`，后者会删除数据卷。
-- 备份整个数据目录或数据卷（建议暂停服务后制作一致快照）；恢复后重启服务。每位用户也可在设置中导出备份或 Markdown。
-- 会话保留七天，服务重启后所有用户需要重新登录。设置中的“退出登录”会先保存更改，保存失败时不会强制退出。
-- 目前支持单个服务实例；账号版本与会话保存在服务进程中，不支持多个副本同时写入同一数据目录。不要从外部直接修改正在使用的服务器笔记库。
-
-## 多设备行为
-
-同一账号的不同设备共享磁盘数据，但不提供实时协同编辑。其他设备保存后，当前页面会提示刷新；旧客户端的写入会被版本检查拒绝。请先复制未保存内容，或在设置中导出备份，再刷新读取最新版本。账号切换后，旧标签页的文件请求也会被工作区身份检查拒绝。
-
-每个账号可访问的路径只来自其会话身份，客户端不能指定他人的笔记库。路径穿越和符号链接访问均被拒绝。上传附件通过认证接口读取为 Blob，不能直接作为本站 HTML 执行。
-
-## 中文与字体
-
-新安装默认简体中文，可在设置 → 通用中切换语言。空笔记库第一次打开会生成中文功能指南。不会替换已有笔记的正文或标题。
-
-字体默认使用浏览器所在设备的系统字体。设置 → 外观可分别填写界面字体和正文字体的本机名称。填写一个字体名即可；字体未安装时回退为系统字体，留空恢复默认。字体设置按浏览器保存，不会把字体文件上传到服务器。
-
-原生文件夹、局域网配对同步、云文件夹检测、系统快捷捕获、AI 助手、MCP、PDF 导出和自动更新仍由桌面版提供。Web 版支持页面编辑、数据库、画布、附件、历史、模板、复习以及备份和 Markdown 导入导出。
+本地 CA 验证不等于公网证书签发验收。真实域名的 DNS、80/443 可达性和 ACME 申请，需要在目标服务器完成配置后检查。

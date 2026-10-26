@@ -69,6 +69,12 @@ test('多账号隔离、认证、版本冲突、附件、路径边界及重启�
   }
   try {
     await start();
+    // 探活不需要认证，也不返回目录和账号信息。
+    assert.deepEqual(await (await api('health')).json(), { ok: true });
+    // 缺少构建入口时不能将只启动了进程的实例报告为健康。
+    await fs.rename(path.join(distDir, 'index.html'), path.join(distDir, 'index.saved'));
+    assert.equal((await api('health')).status, 503);
+    await fs.rename(path.join(distDir, 'index.saved'), path.join(distDir, 'index.html'));
     assert.equal((await api('vault/scan')).status, 401);
     assert.equal((await api('login', '', 'POST', { username: 'alice', password: 'wrong' })).status, 401);
     /** 两个独立账号和同账号的第二个设备会话。 */

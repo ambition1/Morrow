@@ -18,4 +18,5 @@ RUN mkdir -p /app/data && chown -R node:node /app/data
 USER node
 VOLUME ["/app/data"]
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["node", "server/healthcheck.mjs"]
 CMD ["node", "server/index.mjs"]

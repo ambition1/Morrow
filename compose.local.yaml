@@ -1,0 +1,7 @@
+# 功能：仅供本机 HTTP 调试，正式部署不能加载此文件。
+# 作者：xuanli
+# 创建时间：2026-10-27 01:21:20
+services:
+  morrow:
+    environment:
+      MORROW_INSECURE_HTTP: '1'
