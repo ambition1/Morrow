@@ -113,7 +113,7 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
           );
         })}
       </nav>
-      <div className="settings-page" key={current}>
+      <div className="settings-detail">
         <header className="settings-page-head">
           <div className="settings-page-identity">
             <span className="settings-page-icon" aria-hidden="true">
@@ -130,17 +130,19 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
             <X size={16} />
           </button>
         </header>
-        {current === 'general' && <GeneralSettings />}
-        {current === 'appearance' && <AppearanceSettings />}
-        {current === 'assistant' && <AssistantSettings />}
-        {current === 'sync' && (
-          <>
-            <NetworkSettings />
-            <CloudSettings />
-          </>
-        )}
-        {current === 'vault' && <VaultSettings />}
-        {current === 'about' && <AboutSettings />}
+        <div className="settings-page" key={current}>
+          {current === 'general' && <GeneralSettings />}
+          {current === 'appearance' && <AppearanceSettings />}
+          {current === 'assistant' && <AssistantSettings />}
+          {current === 'sync' && (
+            <>
+              <NetworkSettings />
+              <CloudSettings />
+            </>
+          )}
+          {current === 'vault' && <VaultSettings />}
+          {current === 'about' && <AboutSettings />}
+        </div>
       </div>
     </Dialog>
   );

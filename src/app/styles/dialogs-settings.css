@@ -72,12 +72,13 @@
 
 .settings-dialog {
   max-width: 960px;
-  height: min(720px, 86dvh);
+  height: min(680px, 86dvh);
   max-height: calc(100dvh - 32px);
 }
 
 .settings-dialog .dialog-body {
   grid-template-columns: 192px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   scrollbar-gutter: auto;
 }
 
@@ -117,22 +118,33 @@
   opacity: 1;
 }
 
+/* 详情区独立承载实色阅读面，标题不再作为滚动区域内的白色色块悬浮。 */
+.settings-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--surface);
+  overflow: hidden;
+}
+
 .settings-page {
+  flex: 1;
+  min-height: 0;
   gap: 24px;
   padding: 24px 32px 32px;
-  scroll-padding-top: 80px;
+  scroll-padding-top: 24px;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
 .settings-page-head {
-  position: sticky;
-  top: -24px;
-  z-index: 1;
+  position: static;
+  flex: none;
   min-height: 44px;
-  margin: -24px -16px 0 -16px;
-  padding: 24px 16px 16px;
-  background: var(--surface);
+  margin: 0;
+  padding: 24px 32px 20px;
+  background: transparent;
   border-bottom: 1px solid var(--border);
 }
 
@@ -175,7 +187,7 @@
 }
 
 .settings-group {
-  background: var(--bg);
+  background: var(--bg-sidebar);
   border-radius: var(--radius-lg);
 }
 
@@ -527,6 +539,7 @@
 
   .settings-dialog .dialog-body {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .settings-nav {
@@ -549,9 +562,8 @@
   }
 
   .settings-page-head {
-    top: -16px;
-    margin: -16px 0 0;
-    padding: 16px 0 12px;
+    margin: 0;
+    padding: 16px;
   }
 
   .settings-row-control {
