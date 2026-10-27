@@ -15,6 +15,8 @@ export const zhCN: TranslationSchema = {
     unreadable: '有 {count} 项内容无法读取，已保留原样。',
   },
   web: {
+    workspaceLabel: '个人工作空间',
+    capsLock: '大写锁定已开启，请留意密码大小写。',
     welcomeHeading: '记录当下，\n连接想法。',
     welcomeBody: '把笔记、工作记录与灵感放在一起。',
     featureNotes: '自由写作',

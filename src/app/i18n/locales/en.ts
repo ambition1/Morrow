@@ -7,6 +7,8 @@ export const en = {
     unreadable: '{count} items could not be read and were left untouched.',
   },
   web: {
+    workspaceLabel: 'PERSONAL WORKSPACE',
+    capsLock: 'Caps Lock is on. Passwords are case-sensitive.',
     welcomeHeading: 'A place to write.\nRoom to think.',
     welcomeBody: 'Keep your notes, work and ideas together.',
     featureNotes: 'Write freely',

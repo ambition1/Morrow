@@ -9,6 +9,8 @@ export const es: TranslationSchema = {
     unreadable: '{count} items could not be read and were left untouched.',
   },
   web: {
+    workspaceLabel: 'ESPACIO PERSONAL',
+    capsLock: 'Bloq Mayús está activado. La contraseña distingue mayúsculas.',
     welcomeHeading: 'Un lugar para escribir.\nEspacio para pensar.',
     welcomeBody: 'Reúne tus notas, tu trabajo y tus ideas.',
     featureNotes: 'Escribe libremente',

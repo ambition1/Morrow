@@ -20,6 +20,9 @@
   --radius-lg: 10px;
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* 共用控件的反馈时长，保持设置、导航与登录入口的交互节奏一致。 */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
 
   --bg: #ffffff;
   --bg-sidebar: #f8f8f7;

@@ -541,6 +541,26 @@ kbd,
   outline: none;
 }
 
+/* 共用控件只过渡交互状态，避免动画触发布局重新计算。 */
+.button,
+.icon-button {
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+.text-input {
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
 /* controls */
 
 .icon-button {
@@ -1919,7 +1939,7 @@ input[type='checkbox']:checked::after {
 /* 登录入口复用侧边栏色彩与表单控件，以品牌区和登录区建立清晰层级。 */
 .web-login-screen {
   display: grid;
-  grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 44%) minmax(0, 1fr);
   height: 100%;
   color: var(--text);
   background: var(--bg);
@@ -1928,9 +1948,10 @@ input[type='checkbox']:checked::after {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 40px;
+  padding: clamp(28px, 4vw, 64px);
   overflow-y: auto;
   background: var(--bg-sidebar);
+  background: color-mix(in srgb, var(--accent) 3%, var(--bg-sidebar));
   border-right: 1px solid var(--border);
 }
 .web-login-brand {
@@ -1946,27 +1967,32 @@ input[type='checkbox']:checked::after {
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  max-width: 300px;
-  padding: 48px 0;
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 0;
 }
 .web-login-intro h2 {
-  font-size: 28px;
-  line-height: 1.4;
-  letter-spacing: -0.02em;
+  font-size: clamp(32px, 3.4vw, 46px);
+  font-weight: 550;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
   white-space: pre-line;
+  text-wrap: balance;
 }
 .web-login-intro > p {
-  margin-top: 14px;
+  margin-top: 20px;
+  max-width: 30em;
+  font-size: var(--text-md);
   color: var(--text-muted);
   line-height: 1.75;
 }
 .web-login-features {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 28px 0 0;
-  padding: 24px 0 0;
-  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  margin: 18px 0 0;
+  padding: 0;
   list-style: none;
   font-size: var(--text-sm);
   color: var(--text-muted);
@@ -1974,7 +2000,7 @@ input[type='checkbox']:checked::after {
 .web-login-features li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .web-login-features svg {
   flex-shrink: 0;
@@ -1992,7 +2018,7 @@ input[type='checkbox']:checked::after {
   overflow-y: auto;
 }
 .web-login-content {
-  width: min(360px, 100%);
+  width: min(380px, 100%);
   margin: auto;
   flex-shrink: 0;
 }
@@ -2000,12 +2026,12 @@ input[type='checkbox']:checked::after {
   margin-bottom: 28px;
 }
 .web-login-heading h1 {
-  font-size: 26px;
+  font-size: 32px;
   line-height: 1.35;
   letter-spacing: -0.02em;
 }
-.web-login-heading p {
-  margin-top: 10px;
+.web-login-heading > p:not(.web-login-kicker) {
+  margin-top: 12px;
   color: var(--text-muted);
   line-height: 1.6;
 }
@@ -2022,10 +2048,10 @@ input[type='checkbox']:checked::after {
   color: var(--text);
   font-weight: 500;
 }
-/* 登录页使用局部的 40px 控件尺寸，边框、圆角与焦点仍由共享样式提供。 */
+/* 登录入口以 44px 触控高度承载原有边框、圆角与焦点样式。 */
 .web-login .text-input,
 .web-login > .button {
-  height: 40px;
+  height: 44px;
   font-size: var(--text-ui);
 }
 .web-login .text-input::placeholder {
@@ -2038,11 +2064,13 @@ input[type='checkbox']:checked::after {
   position: relative;
 }
 .web-login-password .text-input {
-  padding-right: 44px;
+  padding-right: 52px;
 }
 .web-login-password .icon-button {
   position: absolute;
-  right: 8px;
+  width: 44px;
+  height: 44px;
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
@@ -2054,19 +2082,105 @@ input[type='checkbox']:checked::after {
 .web-login .field-error {
   overflow-wrap: anywhere;
 }
-.web-login-account-note {
-  margin-top: 20px;
-  text-align: center;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
 .web-login-device-note {
-  margin-top: 32px;
+  margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
   font-size: var(--text-xs);
   text-align: center;
   color: var(--text-muted);
+}
+/* 地平线源自 Morrow 的拱形标志，仅作品牌装饰，不循环播放动画。 */
+.web-login-horizon {
+  width: min(100%, 360px);
+  margin: 20px 0 8px;
+  pointer-events: none;
+}
+.web-login-horizon svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.horizon-guide {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.horizon-rise {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+.horizon-ground {
+  stroke: var(--text-faint);
+  stroke-width: 1;
+}
+.horizon-halo {
+  fill: var(--accent-soft);
+}
+.horizon-point {
+  fill: var(--accent);
+}
+.web-login-heading .web-login-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+.web-login-kicker::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.web-login-feedback {
+  min-height: 20px;
+  margin: -8px 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.web-login > .button > svg {
+  transition: transform var(--duration-normal) var(--ease);
+}
+.web-login > .button:hover:not(:disabled) > svg:not(.spin) {
+  transform: translateX(3px);
+}
+.web-login-brand,
+.web-login-intro,
+.web-login-content {
+  animation: login-arrive 420ms var(--ease) both;
+}
+.web-login-intro {
+  animation-delay: 60ms;
+}
+.web-login-content {
+  animation-delay: 100ms;
+}
+@keyframes login-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .web-login-brand,
+  .web-login-intro,
+  .web-login-content {
+    animation: none;
+  }
+  .web-login > .button:hover:not(:disabled) > svg:not(.spin),
+  .button:active:not(:disabled) {
+    transform: none;
+  }
 }
 @media (max-width: 700px) {
   .web-login-screen {
@@ -2087,5 +2201,11 @@ input[type='checkbox']:checked::after {
   }
   .web-login-main {
     padding: 32px 24px;
+  }
+  .web-login-heading h1 {
+    font-size: 28px;
+  }
+  .web-login .text-input {
+    font-size: 16px;
   }
 }

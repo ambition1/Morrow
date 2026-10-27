@@ -9,6 +9,8 @@ export const pt: TranslationSchema = {
     unreadable: '{count} items could not be read and were left untouched.',
   },
   web: {
+    workspaceLabel: 'ESPAÇO PESSOAL',
+    capsLock: 'Caps Lock está ativado. A senha diferencia maiúsculas.',
     welcomeHeading: 'Um lugar para escrever.\nEspaço para pensar.',
     welcomeBody: 'Reúna suas notas, seu trabalho e suas ideias.',
     featureNotes: 'Escreva livremente',

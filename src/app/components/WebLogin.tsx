@@ -4,7 +4,7 @@
  * 创建时间：2026-10-25 23:38:56
  */
 import { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, FileText, LayoutGrid, Waypoints } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, FileText, LayoutGrid, LoaderCircle, Waypoints } from 'lucide-react';
 import { localizeError } from '../i18n/errors';
 import { useTranslation } from '../i18n';
 import { webRequest } from '../platform/webVault';
@@ -24,6 +24,8 @@ export function WebLogin() {
   const [error, setError] = useState('');
   /** 密码默认隐藏，仅由当前用户主动切换可见性。 */
   const [showPassword, setShowPassword] = useState(false);
+  /** 大写锁定提示不作为认证错误，避免误将正确输入标为无效。 */
+  const [capsLock, setCapsLock] = useState(false);
   return (
     <div className="web-login-screen">
       <aside className="web-login-sidebar" aria-label="Morrow">
@@ -34,6 +36,18 @@ export function WebLogin() {
         <div className="web-login-intro">
           <h2>{t('web.welcomeHeading')}</h2>
           <p>{t('web.welcomeBody')}</p>
+          <div className="web-login-horizon" aria-hidden="true">
+            <svg viewBox="0 0 520 260" fill="none" focusable="false">
+              <path
+                className="horizon-guide"
+                d="M36 200H484M100 200A160 160 0 0 1 420 200M140 200A120 120 0 0 1 380 200"
+              />
+              <path className="horizon-rise" d="M100 200A160 160 0 0 1 420 200" />
+              <path className="horizon-ground" d="M200 222H320M232 238H288" />
+              <circle className="horizon-halo" cx="373" cy="87" r="12" />
+              <circle className="horizon-point" cx="373" cy="87" r="4" />
+            </svg>
+          </div>
           <ul className="web-login-features">
             <li>
               <FileText size={17} aria-hidden="true" />
@@ -54,6 +68,7 @@ export function WebLogin() {
       <main className="web-login-main">
         <div className="web-login-content">
           <header className="web-login-heading">
+            <p className="web-login-kicker">{t('web.workspaceLabel')}</p>
             <h1>{t('web.loginTitle')}</h1>
             <p>{t('web.loginHelp')}</p>
           </header>
@@ -86,6 +101,7 @@ export function WebLogin() {
                 className="text-input"
                 name="username"
                 autoComplete="username"
+                disabled={busy}
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-invalid={error ? true : undefined}
@@ -94,7 +110,10 @@ export function WebLogin() {
                 maxLength={48}
                 placeholder={t('web.usernamePlaceholder')}
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event) => {
+                  setUsername(event.target.value);
+                  setError('');
+                }}
               />
             </label>
             <div className="field">
@@ -106,6 +125,7 @@ export function WebLogin() {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
+                  disabled={busy}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
@@ -115,13 +135,20 @@ export function WebLogin() {
                   maxLength={256}
                   placeholder={t('web.passwordPlaceholder')}
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError('');
+                  }}
+                  onKeyDown={(event) => setCapsLock(event.getModifierState('CapsLock'))}
+                  onKeyUp={(event) => setCapsLock(event.getModifierState('CapsLock'))}
+                  onBlur={() => setCapsLock(false)}
                 />
                 <button
                   type="button"
                   className="icon-button small"
                   aria-label={t(showPassword ? 'web.hidePassword' : 'web.showPassword')}
                   aria-pressed={showPassword}
+                  disabled={busy}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -132,17 +159,23 @@ export function WebLogin() {
                 </button>
               </div>
             </div>
-            {error && (
-              <p id="web-login-error" className="field-error" role="alert">
-                {error}
-              </p>
-            )}
+            <div className="web-login-feedback">
+              {error ? (
+                <p id="web-login-error" className="field-error" role="alert">
+                  {error}
+                </p>
+              ) : (
+                <p role={capsLock ? 'status' : undefined}>
+                  {t(capsLock ? 'web.capsLock' : 'web.accountHint')}
+                </p>
+              )}
+            </div>
             <button className="button primary" type="submit" disabled={busy}>
+              {busy && <LoaderCircle size={16} className="spin" aria-hidden="true" />}
               {t(busy ? 'web.loggingIn' : 'web.login')}
               {!busy && <ArrowRight size={15} aria-hidden="true" />}
             </button>
           </form>
-          <p className="web-login-account-note">{t('web.accountHint')}</p>
           <p className="web-login-device-note">{t('web.deviceHint')}</p>
         </div>
       </main>
