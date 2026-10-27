@@ -43,7 +43,6 @@ Morrow Markdown, the only format to write into pages
 - Code blocks are fenced with a language, such as \`\`\`python. Diagrams are \`\`\`mermaid blocks.
 - Maths: $inline$, and a block between lines of $$.
 - Tables: pipe tables with a header row and a --- row.
-- Flashcards: a line written as "question :: answer" becomes a card in Morrow's spaced repetition review.
 - A table of contents of the page's headings: <!-- toc -->. A divider: ---.
 - Columns side by side:
   <div data-columns>

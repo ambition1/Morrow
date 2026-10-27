@@ -335,7 +335,8 @@ describe('sample workspace', () => {
     const { findUnknownTypes } = await import('./doc');
     let n = 0;
     const state = run(emptyWorkspace(), ...sampleCommands(() => `s${n++}`, 1000));
-    expect(Object.keys(state.pages)).toHaveLength(17);
+    // 移除闪卡教程后，欢迎笔记库保留其余十六个页面及原有往返校验。
+    expect(Object.keys(state.pages)).toHaveLength(16);
     // the canvas is a json canvas file rather than markdown
     for (const page of Object.values(state.pages).filter((candidate) => candidate.kind !== 'canvas')) {
       const doc = state.docs[page.id]!;

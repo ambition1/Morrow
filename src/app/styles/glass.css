@@ -47,16 +47,12 @@
   border-radius: var(--radius-panel);
 }
 
-:is(.popover, .menu, .canvas-toolbar, .home-card, .review-card, .settings-group, .db-column) {
+:is(.popover, .menu, .canvas-toolbar, .home-card, .settings-group, .db-column) {
   border-radius: var(--radius-lg);
 }
 
 .tab {
   border-radius: 12px 12px 0 0;
-}
-
-.review-view .review-card {
-  border-radius: var(--radius-panel);
 }
 
 /* 高光绘制在背景中，不添加会遮住按钮或文本的覆盖层。 */

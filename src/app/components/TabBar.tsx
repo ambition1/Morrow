@@ -2,7 +2,6 @@ import {
   CalendarCheck,
   Columns2,
   Copy,
-  GraduationCap,
   Hash,
   Home,
   Network,
@@ -41,7 +40,6 @@ const VIEW_ICONS: Record<string, LucideIcon> = {
   tasks: CalendarCheck,
   trash: Trash2,
   tags: Hash,
-  review: GraduationCap,
   graph: Network,
   search: Search,
 };
@@ -56,8 +54,6 @@ function getViewTitle(name: string): string {
       return t('sidebar.trash');
     case 'tags':
       return t('sidebar.tags');
-    case 'review':
-      return t('sidebar.review');
     case 'graph':
       return t('sidebar.graph');
     case 'search':

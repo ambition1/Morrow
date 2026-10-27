@@ -118,7 +118,7 @@ HTTP 站点需重定向到 HTTPS。必须保留浏览器原始 Host（包括非�
     ├── alice/
     │   ├── 页面.md
     │   ├── attachments/
-    │   ├── .morrow/          # 注册信息、历史、样式、复习进度等
+    │   ├── .morrow/          # 注册信息、历史、样式等
     │   └── .trash/
     └── bob/
 ```

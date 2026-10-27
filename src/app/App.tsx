@@ -5,7 +5,6 @@ import { useGlassLight } from './useGlassLight';
 import { ACTIONS, matchesShortcut, runAction } from './actions';
 import { CommandPalette } from './components/CommandPalette';
 import { Dialogs } from './components/Dialogs';
-import { ReviewView } from './components/ReviewView';
 import { TagsView, TagView } from './components/TagsView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageView } from './components/PageView';
@@ -171,8 +170,6 @@ function viewFor(route: Route) {
       return <TagsView />;
     case 'tag':
       return <TagView tag={route.tag} />;
-    case 'review':
-      return <ReviewView />;
     case 'graph':
       return <GraphView key={route.focus ?? 'all'} focus={route.focus} />;
     case 'search':

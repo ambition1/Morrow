@@ -125,7 +125,6 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
   const books = newId();
   const canvas = newId();
   const board = newId();
-  const memory = newId();
   const privacy = newId();
   const sharing = newId();
   const custom = newId();
@@ -298,7 +297,6 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
           ],
           [
             p(link(canvas, 'Canvas and drawing')),
-            p(link(memory, 'Flashcards and review')),
             p(link(privacy, 'Privacy, history and encryption')),
             p(link(sharing, 'Sync, import, export and publishing')),
             p(link(custom, 'Make it yours')),
@@ -521,9 +519,9 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
         p(
           'Write ',
           k('![[Page name]]'),
-          ' to show another page right here, kept up to date as it changes. This is the chapter on flashcards:',
+          ' to show another page right here, kept up to date as it changes. This is the chapter on privacy:',
         ),
-        p(embed(memory, 'Flashcards and review')),
+        p(embed(privacy, 'Privacy, history and encryption')),
         h(1, 'Pictures, files, sound and video'),
         bullets(
           [
@@ -892,28 +890,6 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
         ],
       }),
     },
-
-    chapter(
-      memory,
-      'Flashcards and review',
-      '🧠',
-      13,
-      doc(
-        p(
-          'Write a line as a question, two colons and an answer, on any page, and it becomes a flashcard. ',
-          b('Review'),
-          ' in the sidebar (',
-          k('Alt R'),
-          ') shows the cards due today. Grade each one and Morrow schedules it again, sooner if you forgot and later if it was easy.',
-        ),
-        p('What does Morrow never send anywhere? :: Your notes'),
-        p('Which key opens today’s note? :: Alt D'),
-        p('How do you mention a date? :: Type @ and pick one'),
-        p(
-          'Edit the question or answer whenever you like. A card keeps its schedule as long as its question stays the same.',
-        ),
-      ),
-    ),
 
     chapter(
       privacy,

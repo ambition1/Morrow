@@ -1,21 +1,19 @@
 /**
- * 功能：统一首页、搜索、任务、标签、复习和回收站的内容层级与响应式布局。
+ * 功能：统一首页、搜索、任务、标签和回收站的内容层级与响应式布局。
  * 作者：xuanli
  * 创建时间：2026-10-28 00:06:52
  */
 
 /* 集合页面沿用内容工具的紧凑字号，以一致的页头和分区间距建立阅读节奏。 */
 .collection-view .home,
-.collection-view .collection,
-.collection-view .review {
+.collection-view .collection {
   width: 100%;
   max-width: var(--content-width);
   padding: var(--space-12) var(--page-gutter) 96px;
   margin-inline: auto;
 }
 
-.collection-view .collection-header,
-.collection-view .review-header {
+.collection-view .collection-header {
   gap: var(--space-3);
   margin-bottom: var(--space-8);
   padding-bottom: var(--space-6);
@@ -36,7 +34,6 @@
 }
 
 .collection-view .collection-header h1,
-.collection-view .review-header h1,
 .collection-view .home-greeting {
   margin: 0;
   color: var(--text);
@@ -48,8 +45,7 @@
   -webkit-text-fill-color: currentColor;
 }
 
-.collection-view .collection-header > .muted,
-.collection-view .review-header .muted {
+.collection-view .collection-header > .muted {
   line-height: 1.7;
   max-width: 60ch;
   text-wrap: pretty;
@@ -59,8 +55,7 @@
   margin-top: 8px;
 }
 
-.collection-view .empty-state.compact,
-.collection-view .review-empty {
+.collection-view .empty-state.compact {
   gap: 16px;
   margin: 0;
   padding: 56px 24px;
@@ -70,8 +65,7 @@
   text-align: center;
 }
 
-.collection-view .empty-state.compact > svg,
-.collection-view .review-empty > svg {
+.collection-view .empty-state.compact > svg {
   color: var(--accent);
 }
 
@@ -337,45 +331,14 @@
   padding-block: 4px;
 }
 
-/* 复习页保持问题为视觉中心，分级操作和进度同样适应窄屏。 */
-.review-view .review-header {
-  align-items: flex-end;
-}
-
-.review-view .review-header h1 {
-  margin: 8px 0;
-}
-
-.review-view .review-card {
-  border-radius: var(--radius-lg);
-  box-shadow: none;
-  background: var(--bg-sidebar);
-  padding: 64px 32px 40px;
-}
-
-.review-view .review-empty h2 {
-  font-size: 20px;
-  line-height: 1.5;
-}
-
-.review-view .review-grade {
-  border-radius: var(--radius);
-}
-
-.review-view .review-progress-bar > span {
-  transition: none;
-}
-
 /* 手机与分栏视图均缩短外边距，危险操作换行而不裁切。 */
 @media (max-width: 800px) {
   .collection-view .home,
-  .collection-view .collection,
-  .collection-view .review {
+  .collection-view .collection {
     padding: 28px 20px 64px;
   }
 
   .collection-view .collection-header h1,
-  .collection-view .review-header h1,
   .collection-view .home-greeting {
     font-size: 28px;
   }
@@ -435,24 +398,10 @@
     max-width: 100%;
     overflow-x: auto;
   }
-
-  .review-view .review-header {
-    flex-wrap: wrap;
-  }
-
-  .review-view .review-grades {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .review-view .review-card {
-    min-height: 240px;
-    padding-inline: 20px;
-  }
 }
 
 .pane[data-size='narrow'] .collection-view .home,
-.pane[data-size='narrow'] .collection-view .collection,
-.pane[data-size='narrow'] .collection-view .review {
+.pane[data-size='narrow'] .collection-view .collection {
   padding-inline: 24px;
 }
 

@@ -17,7 +17,7 @@ export interface SyncPlan {
 }
 
 // morrow's own bookkeeping that is shared, keeping this computer's copy when both changed
-const KEEP_LOCAL = new Set(['.morrow/workspace.json', '.morrow/review.json']);
+const KEEP_LOCAL = new Set(['.morrow/workspace.json']);
 
 export function isSyncedPath(path: string): boolean {
   if (!path || path.includes('.morrow-tmp-') || path.includes('.morrow-move-')) return false;

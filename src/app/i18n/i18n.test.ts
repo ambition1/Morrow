@@ -77,12 +77,9 @@ describe('简体中文完整性', () => {
       // 专有名词、版本号和搜索关键词可以保留英文，其他文案必须包含中文。
       if (
         !key.endsWith('.keywords') &&
-        ![
-          'settings.about.version',
-          'settings.about.gitHubButton',
-          'editor.suggestion.toAction',
-          'review.cardProgress',
-        ].includes(key) &&
+        !['settings.about.version', 'settings.about.gitHubButton', 'editor.suggestion.toAction'].includes(
+          key,
+        ) &&
         read(zhCN)
       )
         expect(read(zhCN), key).toMatch(/[\u4e00-\u9fff]/);

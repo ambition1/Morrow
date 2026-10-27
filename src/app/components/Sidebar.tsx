@@ -8,7 +8,6 @@ import {
   FileUp,
   FolderOpen,
   FolderPlus,
-  GraduationCap,
   Hash,
   Home,
   LayoutDashboard,
@@ -39,9 +38,7 @@ import {
   livePages,
   trashedPages,
 } from '../../core/tree';
-import { collectCards, dueCards } from '../../core/flashcards';
 import { collectTags } from '../../core/tags';
-import { useReviewLog } from '../review';
 import { formatShortcut, runAction } from '../actions';
 import { t, useTranslation } from '../i18n';
 import { desktop } from '../platform/desktop';
@@ -150,9 +147,6 @@ export function Sidebar() {
   const trashCount = useMemo(() => trashedPages(state.pages).length, [state.pages]);
   const openTasks = useMemo(() => collectTasks(state).filter((task) => !task.checked).length, [state]);
   const tagCount = useMemo(() => collectTags(state).length, [state]);
-  const reviewLog = useReviewLog();
-  const cards = useMemo(() => collectCards(state), [state]);
-  const dueCount = useMemo(() => dueCards(cards, reviewLog, new Date()).length, [cards, reviewLog]);
   const [newMenu, setNewMenu] = useState<HTMLElement | null>(null);
   const [vaultMenu, setVaultMenu] = useState<{
     anchor: HTMLElement;
@@ -261,13 +255,6 @@ export function Sidebar() {
           active={route.name === 'tags' || route.name === 'tag'}
           count={tagCount}
           onClick={go(() => navigate({ name: 'tags' }))}
-        />
-        <NavItem
-          icon={GraduationCap}
-          label={t('sidebar.review')}
-          active={route.name === 'review'}
-          count={dueCount}
-          onClick={go(() => navigate({ name: 'review' }))}
         />
         <NavItem
           icon={Network}

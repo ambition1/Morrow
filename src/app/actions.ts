@@ -16,7 +16,6 @@ import {
   FolderArchive,
   FolderOpen,
   Globe,
-  GraduationCap,
   Hash,
   History,
   Home,
@@ -254,15 +253,6 @@ export const ACTIONS: Action[] = [
     shortcut: 'Alt+G',
     keywords: 'graph network links map',
     run: () => navigate({ name: 'graph', focus: null }),
-  },
-  {
-    id: 'go.review',
-    label: 'Review flashcards',
-    group: 'General',
-    icon: GraduationCap,
-    shortcut: 'Alt+R',
-    keywords: 'flashcards spaced repetition study learn',
-    run: () => navigate({ name: 'review' }),
   },
   {
     id: 'go.tags',

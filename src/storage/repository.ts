@@ -48,7 +48,7 @@ export interface WorkspaceRepository {
   attachState?(getState: () => WorkspaceState): void;
   // where a page's file lives, relative to the storage location
   pathOf?(id: PageId): string | null;
-  // small files of morrow's own beside the pages, such as flashcard progress
+  // 页面之外的工作区元数据通过独立文件读写。
   readMeta?(name: string): Promise<string | null>;
   writeMeta?(name: string, text: string): Promise<void>;
   // how many saves happened on each day, keyed yyyy-mm-dd

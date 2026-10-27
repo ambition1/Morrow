@@ -35,8 +35,7 @@ https://github.com/user-attachments/assets/a279710f-1a50-4f1a-82ff-17714cfe7641
 - **Compatible.** Wiki links, callouts, tags, properties, maths and canvases use
   the same formats as Obsidian, so an existing vault opens as it is. Notion
   exports, databases included, import in one step.
-- **Everything built in.** Databases, canvases, graph, sync, encryption and
-  flashcards come with Morrow, with nothing to install or configure.
+- **Everything built in.** Databases, canvases, graph, sync and encryption come with Morrow, with nothing to install or configure.
 - **AI free unless you want it.** Morrow has no AI of its own and sends nothing
   anywhere. An optional assistant can be turned on in Settings with your own API
   key; it is off until you do.
@@ -88,8 +87,6 @@ https://github.com/user-attachments/assets/a279710f-1a50-4f1a-82ff-17714cfe7641
   are marked so you can compare them side by side
 - **Encrypted pages**: lock any page with a password, AES-256 on disk, never a
   plain copy in history or backups
-- **Flashcards**: write `question :: answer` anywhere and review with spaced
-  repetition
 - **Embedded pages** with `![[Page]]`, kept live as the other page changes
 - **Quick capture** from any app with Ctrl/Cmd + Alt + M, straight into today's
   note

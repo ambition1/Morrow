@@ -458,7 +458,7 @@ export async function listDir(
 // files every computer shares: pages, attachments, the trash and the shared part of morrow's bookkeeping
 export function isSyncedPath(relative: string): boolean {
   if (!relative || relative.includes(TEMP_MARK) || relative.includes('.morrow-move-')) return false;
-  if (relative === '.morrow/workspace.json' || relative === '.morrow/review.json') return true;
+  if (relative === '.morrow/workspace.json') return true;
   return !relative
     .split('/')
     .some((part, index) => part.startsWith('.') && !(index === 0 && part === '.trash'));

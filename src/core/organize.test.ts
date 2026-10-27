@@ -13,7 +13,6 @@ import {
   inferType,
   visibleRows,
 } from './database';
-import { collectCards, dueCards, readReviewLog, schedule, writeReviewLog } from './flashcards';
 import { buildGraph, DEFAULT_GRAPH_OPTIONS } from './graph';
 import { activityWeeks, onThisDay, streak } from './insights';
 import { emptyWorkspace, newPageMeta } from './model';
@@ -443,43 +442,6 @@ describe('sync between computers', () => {
     expect(left['a.md']).toBe('edited');
     expect(right['a.md']).toBe('edited');
     expect(right['.obsidian/x.json']).toBe('theirs');
-  });
-});
-
-describe('flashcards', () => {
-  const today = new Date(2026, 9, 16);
-  const state = run(emptyWorkspace(), {
-    type: 'page.create',
-    id: 'fr',
-    parentId: null,
-    now: 1,
-    title: 'French',
-    doc: doc(p('cat :: le chat'), p('just a line'), {
-      type: 'bulletList',
-      content: [{ type: 'listItem', content: [p('dog :: le chien')] }],
-    }),
-  });
-
-  it('finds question :: answer lines anywhere in a page', () => {
-    expect(collectCards(state).map((card) => [card.front, card.back])).toEqual([
-      ['cat', 'le chat'],
-      ['dog', 'le chien'],
-    ]);
-  });
-
-  it('spaces reviews out and starts over when a card is forgotten', () => {
-    const first = schedule(undefined, 'good', today);
-    expect(first).toMatchObject({ interval: 1, due: '2026-10-17', reps: 1 });
-    const second = schedule(first, 'good', new Date(2026, 9, 17));
-    expect(second.interval).toBe(6);
-    const third = schedule(second, 'good', new Date(2026, 9, 23));
-    expect(third.interval).toBeGreaterThan(12);
-    const forgot = schedule(third, 'again', new Date(2026, 10, 10));
-    expect(forgot).toMatchObject({ interval: 1, reps: 0, lapses: 1 });
-    const cards = collectCards(state);
-    const log = { [cards[0]!.id]: first };
-    expect(dueCards(cards, log, today).map((card) => card.front)).toEqual(['dog']);
-    expect(readReviewLog(JSON.parse(writeReviewLog(log)))).toEqual(log);
   });
 });
 
