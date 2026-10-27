@@ -72,8 +72,29 @@
 }
 
 .tree-row.is-active {
-  background: var(--active);
-  box-shadow: inset 2px 0 var(--accent);
+  /* 选中行使用低饱和色面与完整细轮廓，避免侧边硬色条切断圆角。 */
+  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-line) 40%, transparent);
+  color: var(--text);
+  font-weight: 550;
+}
+
+.tree-row.is-active:hover,
+.tree-row.is-active.is-menu-open {
+  background: var(--accent-soft);
+}
+
+.tree-row.is-active .tree-icon {
+  color: var(--accent-strong);
+}
+
+.tree-row.is-active .tree-actions {
+  color: var(--text-muted);
+}
+
+.tree-row.is-active .tree-actions .icon-button:hover {
+  background: var(--surface);
 }
 
 .sidebar-footer {
