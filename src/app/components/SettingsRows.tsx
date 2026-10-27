@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// every part of settings is built from these: titled groups of rows, a label on the left and its control on the right
+/** 用统一的标题、边框与辅助说明组织设置分区。 */
 export function SettingsGroup({
   title,
   help,
@@ -11,7 +11,7 @@ export function SettingsGroup({
   children: ReactNode;
 }) {
   return (
-    <section className="settings-group-wrap">
+    <section className="settings-group-wrap" aria-label={title}>
       {title && <h4 className="settings-group-title">{title}</h4>}
       <div className="settings-group">{children}</div>
       {help && <p className="settings-group-help">{help}</p>}
@@ -19,6 +19,7 @@ export function SettingsGroup({
   );
 }
 
+/** 设置行保留左侧标签与右侧控件，宽内容可切换为纵向布局。 */
 export function SettingRow({
   label,
   help,

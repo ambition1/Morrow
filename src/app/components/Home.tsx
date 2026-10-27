@@ -1,9 +1,18 @@
-import { CalendarDays, CircleCheckBig, FileText, FileUp, Flame, PenLine, Plus, Shuffle } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CalendarDays,
+  CircleCheckBig,
+  FileText,
+  FileUp,
+  Flame,
+  PenLine,
+  Plus,
+  Shuffle,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import { collectTasks } from '../../core/tasks';
 import { activityWeeks, dayLabel, onThisDay, rediscover, streak, totalWords } from '../../core/insights';
 import { docToPlainText } from '../../core/doc';
-import { COVER_GRADIENTS } from '../../core/model';
 import { displayTitle } from '../i18n/labels';
 import type { PageMeta, WorkspaceState } from '../../core/model';
 import { ancestorsOf, livePages } from '../../core/tree';
@@ -47,13 +56,6 @@ function greeting(date: Date, t: (key: TranslationKey) => string): string {
   return t('home.greetings.evening');
 }
 
-// pages without a cover still get one of the gradients, the same one every time
-function cardGradient(page: PageMeta): string {
-  let hash = 0;
-  for (const char of page.id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return `cover-gradient-${(hash % COVER_GRADIENTS) + 1}`;
-}
-
 function PageCard({ page }: { page: PageMeta }) {
   const state = useWorkspace();
   const { className, image } = useCover(page.cover);
@@ -61,7 +63,7 @@ function PageCard({ page }: { page: PageMeta }) {
   return (
     <button type="button" className="home-card" onClick={() => openPage(page.id)}>
       <span
-        className={`home-card-cover ${page.cover ? className : cardGradient(page)}`}
+        className={`home-card-cover ${page.cover ? className : 'home-card-cover-plain'}`}
         style={image ? { backgroundImage: `url("${image}")` } : undefined}
       >
         <span className="home-card-icon">
@@ -70,6 +72,7 @@ function PageCard({ page }: { page: PageMeta }) {
       </span>
       <span className="home-card-body">
         <span className="home-card-title">{displayTitle(page)}</span>
+        <ArrowUpRight className="home-card-open" size={15} aria-hidden="true" />
         <span className="home-card-meta">
           {path ? `${path} · ` : ''}
           {relativeTime(Math.max(page.updatedAt, page.lastOpenedAt ?? 0))}
@@ -158,7 +161,7 @@ export function HomeView() {
   const prefs = usePreferences();
 
   return (
-    <div className="view">
+    <div className="view collection-view home-view">
       <TopBar>
         <span className="topbar-title">{t('home.title')}</span>
       </TopBar>
@@ -184,26 +187,22 @@ export function HomeView() {
           </header>
 
           <div className="home-stats">
-            <div className="home-stat tint-orange">
+            <div className="home-stat">
               <Flame size={18} />
               <strong>{days}</strong>
               <span>{t('home.writingStreak')}</span>
             </div>
-            <div className="home-stat tint-blue">
+            <div className="home-stat">
               <FileText size={18} />
               <strong>{live.length.toLocaleString()}</strong>
               <span>{live.length === 1 ? t('home.pageSingle') : t('home.pagePlural')}</span>
             </div>
-            <div className="home-stat tint-green">
+            <div className="home-stat">
               <PenLine size={18} />
               <strong>{words.toLocaleString()}</strong>
               <span>{words === 1 ? t('home.wordSingle') : t('home.wordPlural')}</span>
             </div>
-            <button
-              type="button"
-              className="home-stat tint-purple"
-              onClick={() => navigate({ name: 'tasks' })}
-            >
+            <button type="button" className="home-stat" onClick={() => navigate({ name: 'tasks' })}>
               <CircleCheckBig size={18} />
               <strong>{openTasks.length}</strong>
               <span>{openTasks.length === 1 ? t('home.openTaskSingle') : t('home.openTaskPlural')}</span>

@@ -1157,7 +1157,12 @@ export function CanvasView({
           </>
         )}
       </div>
-      {data.nodes.length === 0 && <p className="canvas-empty muted">{t('canvas.emptyHint')}</p>}
+      {data.nodes.length === 0 && (
+        <div className="canvas-empty muted">
+          <StickyNote size={28} strokeWidth={1.4} aria-hidden="true" />
+          <p>{t('canvas.emptyHint')}</p>
+        </div>
+      )}
       {pageAnchor && (
         <PagePicker
           anchor={pageAnchor}

@@ -2,6 +2,7 @@ import type { TranslationSchema } from '../types';
 
 export const es: TranslationSchema = {
   boot: {
+    skipToContent: 'Ir al contenido',
     opening: 'Opening your workspace…',
     failed: 'Could not open your workspace',
     unchanged: 'Your saved data has not been changed.',
@@ -9,6 +10,8 @@ export const es: TranslationSchema = {
     unreadable: '{count} items could not be read and were left untouched.',
   },
   web: {
+    aboutFooter:
+      'La edición web usa cuentas con espacios independientes en el servidor. Las páginas, archivos e historial se guardan en el servidor y están disponibles en tus dispositivos.',
     workspaceLabel: 'ESPACIO PERSONAL',
     capsLock: 'Bloq Mayús está activado. La contraseña distingue mayúsculas.',
     welcomeHeading: 'Un lugar para escribir.\nEspacio para pensar.',

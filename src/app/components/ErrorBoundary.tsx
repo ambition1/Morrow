@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { TriangleAlert } from 'lucide-react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { commitEditors } from '../editor/commits';
 import { t } from '../i18n';
@@ -37,7 +38,8 @@ export class ErrorBoundary extends Component<Props, State> {
   override render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="empty-state" role="alert">
+      <div className="empty-state view-error" role="alert">
+        <TriangleAlert size={28} strokeWidth={1.5} aria-hidden="true" />
         <h1>{t('errors.viewFailed')}</h1>
         <p>{t('errors.pagesSafe')}</p>
         <p className="muted small">{this.state.error.message}</p>

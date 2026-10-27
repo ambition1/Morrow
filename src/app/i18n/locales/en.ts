@@ -1,5 +1,6 @@
 export const en = {
   boot: {
+    skipToContent: 'Skip to content',
     opening: 'Opening your workspace…',
     failed: 'Could not open your workspace',
     unchanged: 'Your saved data has not been changed.',
@@ -7,6 +8,8 @@ export const en = {
     unreadable: '{count} items could not be read and were left untouched.',
   },
   web: {
+    aboutFooter:
+      'The browser edition uses accounts with separate server vaults. Pages, attachments and history are stored on the server and accessible from your devices.',
     workspaceLabel: 'PERSONAL WORKSPACE',
     capsLock: 'Caps Lock is on. Passwords are case-sensitive.',
     welcomeHeading: 'A place to write.\nRoom to think.',

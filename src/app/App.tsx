@@ -224,7 +224,20 @@ function Pane({
         onFocusCapture={() => setActivePane(pane)}
       >
         <ErrorBoundary resetKey={routeHash(route)}>
-          <Suspense fallback={<div className="view" aria-busy="true" />}>{viewFor(route)}</Suspense>
+          <Suspense
+            fallback={
+              <div className="view view-loading" aria-busy="true" role="status">
+                <span className="visually-hidden">{t('boot.opening')}</span>
+                <div className="view-skeleton" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            }
+          >
+            {viewFor(route)}
+          </Suspense>
         </ErrorBoundary>
       </section>
     </PaneContext.Provider>
@@ -313,9 +326,19 @@ export function App() {
     <div
       className={`app${prefs.sidebarOpen ? '' : ' sidebar-collapsed'}${prefs.assistant && prefs.assistantOpen ? ' has-assistant' : ''}${ui.mobileSidebar ? ' mobile-sidebar-open' : ''}${ui.focusMode ? ' focus-mode' : ''}`}
     >
+      <a
+        className="skip-content"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('main-content')?.focus();
+        }}
+      >
+        {t('boot.skipToContent')}
+      </a>
       <Sidebar />
       <div className="scrim" aria-hidden="true" onClick={() => setUi({ mobileSidebar: false })} />
-      <main className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
         <TabBar />
         <div className={`panes${sideRoute ? ' is-split' : ''}`}>
           <Pane

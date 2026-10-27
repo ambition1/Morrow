@@ -83,6 +83,8 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
     !desktop && (section === 'assistant' || section === 'sync') ? 'general' : (section ?? 'general'),
   );
   const shown = SECTIONS.find((item) => item.id === current) ?? SECTIONS[0]!;
+  /** 当前设置分区使用导航中的同一个图标，保持标题与入口对应。 */
+  const SectionIcon = shown.icon;
   return (
     <Dialog
       title={t('settings.title')}
@@ -92,7 +94,9 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
       onClose={closeDialog}
     >
       <nav className="settings-nav" aria-label={t('settings.title')}>
-        <p className="settings-nav-title">{t('settings.title')}</p>
+        <p className="settings-nav-title">
+          <Logo size={20} /> {t('settings.title')}
+        </p>
         {SECTIONS.filter((item) => desktop || !['assistant', 'sync'].includes(item.id)).map((item) => {
           const Icon = item.icon;
           const label = t(item.key);
@@ -111,7 +115,12 @@ export function SettingsDialog({ section }: { section?: SettingsSection }) {
       </nav>
       <div className="settings-page" key={current}>
         <header className="settings-page-head">
-          <h3>{t(shown.key)}</h3>
+          <div className="settings-page-identity">
+            <span className="settings-page-icon" aria-hidden="true">
+              <SectionIcon size={18} />
+            </span>
+            <h3>{t(shown.key)}</h3>
+          </div>
           <button
             type="button"
             className="icon-button"
@@ -610,7 +619,7 @@ function AboutSettings() {
           </button>
         </SettingRow>
       </SettingsGroup>
-      <p className="settings-group-help">{t('settings.about.footer')}</p>
+      <p className="settings-group-help">{t(desktop ? 'settings.about.footer' : 'web.aboutFooter')}</p>
     </>
   );
 }

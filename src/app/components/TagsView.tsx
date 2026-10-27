@@ -16,13 +16,16 @@ export function TagsView() {
   const state = useWorkspace();
   const tags = useMemo(() => collectTags(state), [state]);
   return (
-    <div className="view">
+    <div className="view collection-view tags-view">
       <TopBar>
         <span className="topbar-title">{t('tags.title')}</span>
       </TopBar>
       <div className="page-scroll">
         <div className="collection">
           <header className="collection-header">
+            <span className="collection-symbol" aria-hidden="true">
+              <Hash size={22} strokeWidth={1.5} />
+            </span>
             <h1>{t('tags.title')}</h1>
             <p className="muted">{t('tags.subtitle')}</p>
           </header>
@@ -40,7 +43,8 @@ export function TagsView() {
                     className={`tag-chip large tag-${tagColor(entry.tag)}`}
                     onClick={() => navigate({ name: 'tag', tag: entry.tag })}
                   >
-                    #{entry.tag} <span className="tag-count">{entry.pages.length}</span>
+                    <span className="tag-chip-label">#{entry.tag}</span>{' '}
+                    <span className="tag-count">{entry.pages.length}</span>
                   </button>
                 </li>
               ))}
@@ -57,7 +61,7 @@ export function TagView({ tag }: { tag: string }) {
   const pages = useMemo(() => pagesWithTag(state, tag), [state, tag]);
   const { shown, more } = useShowMore(pages, 60);
   return (
-    <div className="view">
+    <div className="view collection-view tags-view">
       <TopBar>
         <nav className="breadcrumbs" aria-label={t('common.breadcrumb')}>
           <ol>
@@ -78,6 +82,9 @@ export function TagView({ tag }: { tag: string }) {
       <div className="page-scroll">
         <div className="collection">
           <header className="collection-header">
+            <span className="collection-symbol" aria-hidden="true">
+              <Hash size={22} strokeWidth={1.5} />
+            </span>
             <h1>#{tag}</h1>
             <p className="muted">
               {pages.length === 1

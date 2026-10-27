@@ -1,0 +1,256 @@
+/**
+ * 功能：统一工作空间导航、共享控件、页签及入口的视觉和响应式行为。
+ * 作者：xuanli
+ * 创建时间：2026-10-28 00:05:00
+ */
+
+/* 主框架保留内容纸面，导航以轻表面和明确选中态建立空间关系。 */
+.sidebar-header {
+  min-height: 72px;
+  padding: 16px 12px 12px;
+}
+
+.brand {
+  gap: 10px;
+  padding: 8px;
+}
+
+.brand-name {
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.sidebar-nav {
+  padding: 0 12px 20px;
+  gap: 4px;
+}
+
+.nav-item {
+  height: 36px;
+  padding-inline: 10px;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.nav-item.is-active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.nav-item.is-active > svg {
+  color: var(--accent);
+}
+
+.nav-count {
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sidebar-scroll {
+  border-top: 1px solid var(--border);
+  padding: 12px 12px 20px;
+  scrollbar-width: thin;
+}
+
+.sidebar-heading {
+  padding-block: 8px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sidebar-section + .sidebar-section {
+  margin-top: 24px;
+}
+
+.tree-row {
+  height: 32px;
+}
+
+.tree-row.is-active {
+  background: var(--active);
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+.sidebar-footer {
+  padding: 12px;
+  gap: 4px;
+}
+
+/* 页签与顶部操作区保持紧凑，当前文档以纸面背景连接内容。 */
+.tab-bar {
+  padding-inline: 12px;
+}
+
+.tab {
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.topbar {
+  min-height: 52px;
+  padding-inline: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-title {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.page-scroll {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* 弹出菜单、分段控制和空状态沿用同一轮廓与数字节奏。 */
+.menu-item {
+  min-height: 32px;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.segmented {
+  gap: 2px;
+  border: 1px solid var(--border);
+}
+
+.segmented button {
+  transition:
+    color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.segmented button.is-active {
+  color: var(--text);
+}
+
+.empty-state > svg {
+  padding: 10px;
+  box-sizing: content-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  background: var(--bg-sidebar);
+}
+
+.boot-text {
+  max-width: 42ch;
+  text-wrap: pretty;
+}
+
+/* 跳转链接只在键盘使用时出现，不抢占正常布局或改变路由。 */
+.skip-content {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--popover);
+  transform: translateY(-160%);
+}
+
+.skip-content:focus {
+  transform: none;
+}
+
+.view-skeleton {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 720px);
+  margin-inline: auto;
+  padding: 48px var(--page-gutter);
+}
+
+.view-skeleton span {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+}
+
+.view-skeleton span:first-child {
+  width: 40%;
+  height: 32px;
+  margin-bottom: 16px;
+}
+
+.view-skeleton span:last-child {
+  width: 72%;
+}
+
+/* 键盘聚焦与触摸交互都可见，不依赖悬停显示必要操作。 */
+.nav-item:focus-visible,
+.tree-row:focus-visible,
+.tab:focus-visible,
+.menu-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+@media (max-width: 800px) {
+  .sidebar-header {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  .sidebar-footer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .nav-item,
+  .tree-row {
+    min-height: 44px;
+  }
+
+  .topbar {
+    min-height: 52px;
+    padding-inline: 8px;
+  }
+
+  .topbar :is(.topbar-nav, .topbar-actions) > .icon-button,
+  .topbar .history-buttons .icon-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (hover: none) {
+  .tree-actions {
+    display: flex;
+  }
+}
+
+/* 手机横屏让整条侧栏滚动，避免固定导航和底部入口挤出可视区域。 */
+@media (max-width: 800px) and (max-height: 600px) {
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sidebar-header,
+  .sidebar-nav,
+  .sidebar-footer {
+    flex-shrink: 0;
+  }
+
+  .sidebar-scroll {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item,
+  .tab,
+  .menu-item,
+  .segmented button {
+    transition: none;
+  }
+}

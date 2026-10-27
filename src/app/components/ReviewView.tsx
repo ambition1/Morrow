@@ -100,7 +100,7 @@ export function ReviewView() {
   const next = !current ? upcoming(cards, log) : null;
 
   return (
-    <div className="view">
+    <div className="view collection-view review-view">
       <TopBar>
         <span className="topbar-title">{t('review.title')}</span>
       </TopBar>
@@ -108,6 +108,9 @@ export function ReviewView() {
         <div className="review">
           <header className="review-header">
             <div>
+              <span className="collection-symbol" aria-hidden="true">
+                <GraduationCap size={22} strokeWidth={1.5} />
+              </span>
               <h1>{t('review.heading')}</h1>
               <p className="muted">
                 {cards.length === 0
@@ -125,6 +128,10 @@ export function ReviewView() {
             {current && (
               <div
                 className="review-progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={total}
+                aria-valuenow={done}
                 aria-label={t('review.cardProgressAria', { current: done + 1, total })}
               >
                 <span>{t('review.cardProgress', { current: done + 1, total })}</span>

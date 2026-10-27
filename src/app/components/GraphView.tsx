@@ -342,66 +342,72 @@ export function GraphView({ focus }: { focus: PageId | null }) {
           role="img"
           aria-label={t('graph.canvasAria', { nodes: graph.nodes.length, links: graph.links.length })}
         />
-        <div className="graph-controls popover">
-          <input
-            className="text-input small"
-            placeholder={t('graph.findPlaceholder')}
-            aria-label={t('graph.findAria')}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <label className="checkbox-row">
+        <details className="graph-controls popover" open>
+          <summary className="graph-controls-title">
+            <Network size={15} aria-hidden="true" />
+            <span>{t('graph.title')}</span>
+          </summary>
+          <div className="graph-control-fields">
             <input
-              type="checkbox"
-              checked={options.tags}
-              onChange={(event) => change({ tags: event.target.checked })}
-            />{' '}
-            {t('graph.tags')}
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={options.hierarchy}
-              onChange={(event) => change({ hierarchy: event.target.checked })}
-            />{' '}
-            {t('graph.subpages')}
-          </label>
-          {focus ? (
-            <label className="checkbox-row">
-              {t('graph.depth')}
-              <select
-                className="text-input small"
-                value={options.depth}
-                onChange={(event) => change({ depth: Number(event.target.value) })}
-              >
-                <option value={1}>1</option>
-                <option value={2}>2</option>
-                <option value={3}>3</option>
-              </select>
-            </label>
-          ) : (
+              className="text-input small"
+              placeholder={t('graph.findPlaceholder')}
+              aria-label={t('graph.findAria')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
             <label className="checkbox-row">
               <input
                 type="checkbox"
-                checked={options.orphans}
-                onChange={(event) => change({ orphans: event.target.checked })}
+                checked={options.tags}
+                onChange={(event) => change({ tags: event.target.checked })}
               />{' '}
-              {t('graph.unlinkedPages')}
+              {t('graph.tags')}
             </label>
-          )}
-          {focus && (
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => navigate({ name: 'graph', focus: null })}
-            >
-              <Network size={13} /> {t('graph.wholeGraph')}
-            </button>
-          )}
-          <span className="muted small">
-            {t('graph.stats', { nodes: graph.nodes.length, links: graph.links.length })}
-          </span>
-        </div>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={options.hierarchy}
+                onChange={(event) => change({ hierarchy: event.target.checked })}
+              />{' '}
+              {t('graph.subpages')}
+            </label>
+            {focus ? (
+              <label className="checkbox-row">
+                {t('graph.depth')}
+                <select
+                  className="text-input small"
+                  value={options.depth}
+                  onChange={(event) => change({ depth: Number(event.target.value) })}
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
+              </label>
+            ) : (
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={options.orphans}
+                  onChange={(event) => change({ orphans: event.target.checked })}
+                />{' '}
+                {t('graph.unlinkedPages')}
+              </label>
+            )}
+            {focus && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => navigate({ name: 'graph', focus: null })}
+              >
+                <Network size={13} /> {t('graph.wholeGraph')}
+              </button>
+            )}
+            <span className="graph-stats muted small">
+              {t('graph.stats', { nodes: graph.nodes.length, links: graph.links.length })}
+            </span>
+          </div>
+        </details>
       </div>
     </div>
   );

@@ -55,13 +55,17 @@ export function SearchView({ query }: { query: string }) {
   );
 
   return (
-    <div className="view">
+    <div className="view collection-view search-page">
       <TopBar>
         <span className="topbar-title">{t('common.search')}</span>
       </TopBar>
       <div className="page-scroll">
         <div className="collection search-view">
           <header className="collection-header">
+            <span className="collection-symbol" aria-hidden="true">
+              <Search size={22} strokeWidth={1.5} />
+            </span>
+            <h1>{t('common.search')}</h1>
             <label className="search-field">
               <Search size={18} strokeWidth={1.75} />
               <input
@@ -115,6 +119,12 @@ export function SearchView({ query }: { query: string }) {
             <div className="empty-state compact">
               <Search size={24} strokeWidth={1.5} />
               <p>{t('searchView.noMatches', { query })}</p>
+            </div>
+          )}
+          {!query.trim() && (
+            <div className="empty-state compact search-intro">
+              <Search size={24} strokeWidth={1.5} aria-hidden="true" />
+              <p>{t('searchView.placeholder')}</p>
             </div>
           )}
           <ul className="search-results">

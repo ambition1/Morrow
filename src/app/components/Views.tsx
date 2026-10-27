@@ -79,6 +79,7 @@ export function TaskList({
         <section key={pageId} className="task-group">
           <button type="button" className="task-group-title" onClick={() => openPage(pageId)}>
             {displayTitle(state.pages[pageId])}
+            <span className="section-count">{items.length}</span>
           </button>
           <ul className="task-list">{items.map((task) => row(task, false))}</ul>
         </section>
@@ -100,13 +101,16 @@ export function TasksView() {
   const openCount = all.filter((task) => !task.checked).length;
 
   return (
-    <div className="view">
+    <div className="view collection-view tasks-view">
       <TopBar>
         <span className="topbar-title">{t('tasks.title')}</span>
       </TopBar>
       <div className="page-scroll">
         <div className="collection">
           <header className="collection-header">
+            <span className="collection-symbol" aria-hidden="true">
+              <CheckSquare size={22} strokeWidth={1.5} />
+            </span>
             <h1>{t('tasks.title')}</h1>
             <p className="muted">{t('tasks.subtitle')}</p>
             <div className="segmented" role="radiogroup" aria-label={t('tasks.showAria')}>
@@ -154,13 +158,16 @@ export function TrashView() {
   const listed = useShowMore(trashed, 60);
 
   return (
-    <div className="view">
+    <div className="view collection-view trash-view">
       <TopBar>
         <span className="topbar-title">{t('trash.title')}</span>
       </TopBar>
       <div className="page-scroll">
         <div className="collection">
           <header className="collection-header">
+            <span className="collection-symbol" aria-hidden="true">
+              <Trash2 size={22} strokeWidth={1.5} />
+            </span>
             <h1>{t('trash.title')}</h1>
             <p className="muted">{t('trash.subtitle')}</p>
             {trashed.length > 0 && (

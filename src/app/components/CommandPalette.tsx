@@ -160,6 +160,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             className="palette-input"
+            aria-label={t('actions.searchPlaceholder')}
             placeholder={t('actions.searchPlaceholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}

@@ -19,6 +19,18 @@
   --radius: 6px;
   --radius-lg: 10px;
 
+  /* 工作空间的共享间距与标题尺度，供各页面区域统一引用。 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --page-gutter: clamp(20px, 4vw, 48px);
+  --page-heading: clamp(28px, 3vw, 36px);
+  --content-width: 960px;
+
   --ease: cubic-bezier(0.2, 0, 0, 1);
   /* 共用控件的反馈时长，保持设置、导航与登录入口的交互节奏一致。 */
   --duration-fast: 120ms;

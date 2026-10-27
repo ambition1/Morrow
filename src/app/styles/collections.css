@@ -1,0 +1,461 @@
+/**
+ * 功能：统一首页、搜索、任务、标签、复习和回收站的内容层级与响应式布局。
+ * 作者：xuanli
+ * 创建时间：2026-10-28 00:06:52
+ */
+
+/* 集合页面沿用内容工具的紧凑字号，以一致的页头和分区间距建立阅读节奏。 */
+.collection-view .home,
+.collection-view .collection,
+.collection-view .review {
+  width: 100%;
+  max-width: var(--content-width);
+  padding: var(--space-12) var(--page-gutter) 96px;
+  margin-inline: auto;
+}
+
+.collection-view .collection-header,
+.collection-view .review-header {
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.collection-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sidebar);
+  color: var(--accent);
+}
+
+.collection-view .collection-header h1,
+.collection-view .review-header h1,
+.collection-view .home-greeting {
+  margin: 0;
+  color: var(--text);
+  font: 600 var(--page-heading)/1.35 var(--font-ui);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.collection-view .collection-header > .muted,
+.collection-view .review-header .muted {
+  line-height: 1.7;
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+
+.collection-view .collection-header > .segmented {
+  margin-top: 8px;
+}
+
+.collection-view .empty-state.compact,
+.collection-view .review-empty {
+  gap: 16px;
+  margin: 0;
+  padding: 56px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sidebar);
+  text-align: center;
+}
+
+.collection-view .empty-state.compact > svg,
+.collection-view .review-empty > svg {
+  color: var(--accent);
+}
+
+.collection-view .empty-state.compact p {
+  max-width: 44ch;
+  line-height: 1.75;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+/* 首页以数字、最近内容和书写活动为主，不用随机渐变替代真实封面。 */
+.home-view .home-header {
+  position: relative;
+  margin-bottom: 28px;
+}
+
+.home-view .home-date {
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.home-view .home-today {
+  margin-top: 20px;
+}
+
+.home-view .home-stats {
+  gap: 0;
+  margin: 0 0 36px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.home-view .home-stat {
+  position: relative;
+  gap: 8px;
+  padding: 0 20px;
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-view .home-stat:first-child {
+  padding-left: 0;
+}
+
+.home-view .home-stat + .home-stat {
+  border-left: 1px solid var(--border);
+}
+
+.home-view .home-stat svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.home-view .home-stat strong {
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.home-view .home-stat span {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.home-view button.home-stat:hover {
+  color: var(--accent-strong);
+  filter: none;
+}
+
+.home-view .section-label {
+  font-size: var(--text-ui);
+  letter-spacing: 0;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.home-view .home-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.home-view .home-card {
+  min-width: 0;
+  transition:
+    border-color var(--duration-normal) var(--ease),
+    background var(--duration-normal) var(--ease);
+}
+
+.home-view .home-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-strong);
+  background: var(--bg-sidebar);
+}
+
+.home-view .home-card-cover {
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-view .home-card-cover-plain {
+  background: var(--bg-sidebar);
+}
+
+.home-view .home-card-icon {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.home-view .home-card-body {
+  position: relative;
+  padding: 24px 12px 16px;
+  gap: 8px;
+}
+
+.home-view .home-card-title {
+  padding-right: 16px;
+  font-weight: 550;
+}
+
+.home-card-open {
+  position: absolute;
+  right: 12px;
+  top: 24px;
+  color: var(--text-faint);
+}
+
+.home-view .heatmap-card {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.home-view .heatmap,
+.home-view .heatmap-months {
+  min-width: 560px;
+}
+
+.home-view .heatmap-foot {
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* 搜索结果与标签详情用连续列表保持阅读效率，交互范围不再超出内容栏。 */
+.collection-view .search-field {
+  height: 48px;
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+
+.collection-view .search-field input {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.collection-view .search-meta {
+  margin-top: 12px;
+}
+
+.collection-view .search-result {
+  width: 100%;
+  margin: 0;
+  padding: 20px 12px;
+  gap: 10px;
+  border-radius: var(--radius);
+}
+
+.collection-view .search-results > li + li,
+.collection-view .link-list > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.collection-view .search-result-title {
+  font-size: var(--text-md);
+}
+
+.collection-view .search-snippet {
+  font-size: var(--text-ui);
+  line-height: 1.7;
+}
+
+.collection-view .link-row {
+  width: 100%;
+  margin-inline: 0;
+  padding: 14px 12px;
+  min-height: 52px;
+}
+
+.collection-view .link-row-meta,
+.collection-view .search-result-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.tags-view .tag-cloud {
+  gap: var(--space-3);
+}
+
+.tags-view .tag-chip.large {
+  gap: 16px;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+}
+
+.tag-chip-label {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.tags-view .tag-cloud > li {
+  max-width: 100%;
+}
+
+.tags-view .tag-count {
+  min-width: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* 任务保留可直接勾选的列表，分组名称与任务数量并列呈现。 */
+.collection-view .task-groups {
+  gap: 28px;
+}
+
+.collection-view .task-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 4px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.collection-view .task-row {
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+}
+
+.collection-view .task-text {
+  font-size: var(--text-md);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.collection-view .task-check {
+  min-width: 32px;
+  min-height: 40px;
+}
+
+.collection-view .trash-row {
+  padding-block: 4px;
+}
+
+/* 复习页保持问题为视觉中心，分级操作和进度同样适应窄屏。 */
+.review-view .review-header {
+  align-items: flex-end;
+}
+
+.review-view .review-header h1 {
+  margin: 8px 0;
+}
+
+.review-view .review-card {
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+  background: var(--bg-sidebar);
+  padding: 64px 32px 40px;
+}
+
+.review-view .review-empty h2 {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.review-view .review-grade {
+  border-radius: var(--radius);
+}
+
+.review-view .review-progress-bar > span {
+  transition: none;
+}
+
+/* 手机与分栏视图均缩短外边距，危险操作换行而不裁切。 */
+@media (max-width: 800px) {
+  .collection-view .home,
+  .collection-view .collection,
+  .collection-view .review {
+    padding: 28px 20px 64px;
+  }
+
+  .collection-view .collection-header h1,
+  .collection-view .review-header h1,
+  .collection-view .home-greeting {
+    font-size: 28px;
+  }
+
+  .home-view .home-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-view .home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 0;
+  }
+
+  .home-view .home-stat:nth-child(odd) {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .collection-view .trash-row {
+    flex-wrap: wrap;
+    gap: 0;
+    padding-bottom: 12px;
+  }
+
+  .collection-view .trash-row .link-row {
+    flex-basis: 100%;
+  }
+
+  .collection-view .trash-row .row-actions {
+    margin-left: 12px;
+    flex-wrap: wrap;
+  }
+
+  .collection-view .search-result-head {
+    flex-wrap: wrap;
+  }
+
+  .collection-view .search-result-title {
+    max-width: calc(100% - 32px);
+  }
+
+  .collection-view .search-result-path {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 26px;
+  }
+
+  .collection-view .search-result-time {
+    margin-left: 26px;
+  }
+
+  .collection-view .search-snippet {
+    padding-left: 0;
+  }
+
+  .collection-view .search-meta .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .review-view .review-header {
+    flex-wrap: wrap;
+  }
+
+  .review-view .review-grades {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-view .review-card {
+    min-height: 240px;
+    padding-inline: 20px;
+  }
+}
+
+.pane[data-size='narrow'] .collection-view .home,
+.pane[data-size='narrow'] .collection-view .collection,
+.pane[data-size='narrow'] .collection-view .review {
+  padding-inline: 24px;
+}
+
+.pane[data-size='narrow'] .home-view .home-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

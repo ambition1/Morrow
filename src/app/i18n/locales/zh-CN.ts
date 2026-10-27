@@ -8,6 +8,7 @@ import type { TranslationSchema } from '../types';
 /** 简体中文词典，与英文词典保持键和插值参数一致。 */
 export const zhCN: TranslationSchema = {
   boot: {
+    skipToContent: '跳转到内容',
     opening: '正在打开工作区…',
     failed: '无法打开工作区',
     unchanged: '已保存的数据未被更改。',
@@ -15,6 +16,8 @@ export const zhCN: TranslationSchema = {
     unreadable: '有 {count} 项内容无法读取，已保留原样。',
   },
   web: {
+    aboutFooter:
+      '浏览器版通过账号访问服务器上的独立笔记库。页面、附件与历史记录保存在服务器，可在不同设备登录使用。',
     workspaceLabel: '个人工作空间',
     capsLock: '大写锁定已开启，请留意密码大小写。',
     welcomeHeading: '记录当下，\n连接想法。',

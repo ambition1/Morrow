@@ -1,0 +1,448 @@
+/**
+ * 功能：统一笔记、数据库、画布与关系图谱的阅读层级、工具区和响应式布局。
+ * 作者：xuanli
+ * 创建时间：2026-10-28 00:05:29
+ */
+
+/* 笔记标题与内容保持同一条阅读轴；数据库获得更充足的工作空间。 */
+.page {
+  padding-top: 32px;
+}
+
+.page[data-kind='database'].width-wide {
+  /* 宽屏数据库扩大工作区，舒适宽度仍遵守用户原有设置。 */
+  --page-width: 1080px;
+}
+
+.page-title {
+  margin-top: 20px;
+  margin-bottom: 24px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.page-title:focus-visible {
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.page-header-actions {
+  gap: 8px;
+}
+
+.page-section {
+  margin-top: 40px;
+  padding-top: 20px;
+}
+
+.page-section .section-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.page .row-props {
+  gap: 4px;
+  padding: 12px;
+  margin: 0 0 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sidebar);
+}
+
+.row-prop {
+  min-height: 36px;
+}
+
+.row-prop-value {
+  min-width: 0;
+}
+
+.row-prop-value .prop-yaml {
+  max-width: 100%;
+}
+
+/* 数据库使用清晰的视图切换与工具区，单元格仍保持原有编辑与列宽行为。 */
+.database {
+  margin-top: 12px;
+}
+
+.db-bar {
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.db-tabs {
+  min-width: 0;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sidebar);
+}
+
+.db-tab {
+  height: 30px;
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.db-tab.is-active {
+  background: var(--surface);
+  color: var(--accent-strong);
+  box-shadow: 0 0 0 1px var(--border);
+  font-weight: 600;
+}
+
+.db-tab svg {
+  flex: none;
+}
+
+.db-tools {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.db-tools .text-tool {
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.db-tools .text-tool.is-active {
+  background: var(--accent-soft);
+}
+
+.db-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  scrollbar-gutter: stable;
+}
+
+.db-table th {
+  height: 38px;
+  background: var(--bg-sidebar);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.db-table td {
+  height: 38px;
+}
+
+.db-table tbody tr:hover {
+  background: var(--hover);
+}
+
+.db-table tr:focus-within {
+  background: var(--accent-soft);
+}
+
+.db-table .db-title-input:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.db-new-row {
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  color: var(--text-muted);
+}
+
+.db-count {
+  margin-top: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.db-board {
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.db-column {
+  flex-basis: 272px;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--solid, var(--solid-gray)) 4%, var(--bg-sidebar));
+}
+
+.db-column-head {
+  padding: 4px 2px 10px;
+  font-weight: 600;
+}
+
+.db-column-head > .muted {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.db-card {
+  gap: 8px;
+  padding: 12px;
+  box-shadow: none;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease);
+}
+
+.db-card:hover {
+  background: var(--bg);
+}
+
+.db-card-title {
+  line-height: 1.6;
+}
+
+.db-cover {
+  margin: -12px -12px 0;
+}
+
+.db-gallery {
+  gap: 16px;
+}
+
+.db-list .link-row {
+  min-height: 48px;
+  margin: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-calendar-head {
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+
+.db-calendar-grid {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.db-weekday {
+  padding: 8px;
+  background: var(--bg-sidebar);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.db-day {
+  min-height: 104px;
+  padding: 6px;
+  gap: 4px;
+}
+
+.db-day-number {
+  width: 24px;
+  height: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.db-event {
+  padding: 4px 6px;
+}
+
+/* 画布不对节点位置和缩放做补间，保证拖动始终跟随指针。 */
+.canvas-toolbar {
+  max-width: calc(100% - 32px);
+  overflow-x: auto;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  scrollbar-width: thin;
+}
+
+.canvas-toolbar > * {
+  flex-shrink: 0;
+}
+
+.canvas-toolbar .icon-button {
+  min-width: 32px;
+  height: 32px;
+}
+
+.canvas-toolbar .icon-button.is-tool {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.canvas-zoom {
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-empty {
+  top: 35%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.canvas-empty > svg {
+  box-sizing: content-box;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-faint);
+}
+
+.canvas-empty p {
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.inline-canvas-frame {
+  border-radius: var(--radius-lg);
+}
+
+/* 图谱过滤区可原生折叠，窄屏也能留出可操作的图谱画面。 */
+.graph-controls {
+  display: block;
+  width: 224px;
+  max-height: calc(100% - 32px);
+  top: 16px;
+  right: 16px;
+  padding: 0;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+}
+
+.graph-controls-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+
+.graph-controls-title::-webkit-details-marker {
+  display: none;
+}
+
+.graph-controls-title::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+.graph-controls[open] .graph-controls-title::after {
+  content: '−';
+}
+
+.graph-controls-title:hover {
+  background: var(--hover);
+}
+
+.graph-control-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.graph-controls .checkbox-row {
+  min-height: 24px;
+  gap: 8px;
+}
+
+.graph-controls .checkbox-row > input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+
+.graph-stats {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 窄屏保留表格和日历自身横向滚动，不把页面内容挤压成不可读的列。 */
+@media (max-width: 800px) {
+  .page {
+    padding-top: 20px;
+  }
+
+  .page-title {
+    margin-top: 16px;
+    margin-bottom: 20px;
+  }
+
+  .page .row-props {
+    padding: 8px;
+  }
+
+  .db-tabs {
+    max-width: 100%;
+  }
+
+  .db-tools {
+    gap: 4px;
+  }
+
+  .db-tools .text-tool {
+    min-height: 36px;
+  }
+
+  .db-calendar {
+    overflow-x: auto;
+  }
+
+  .db-calendar-grid {
+    min-width: 560px;
+  }
+
+  .db-day {
+    min-height: 88px;
+  }
+
+  .canvas-toolbar {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-width: calc(100% - 24px);
+  }
+
+  .canvas-toolbar .icon-button {
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .graph-controls {
+    left: auto;
+    top: 12px;
+    right: 12px;
+    width: min(224px, calc(100% - 24px));
+    max-height: calc(100% - 24px);
+  }
+
+  .graph-controls .text-input {
+    font-size: 16px;
+  }
+}
+
+/* 分栏视图按实际可用宽度压缩工具区，而不是依赖整个窗口宽度。 */
+.pane[data-size='narrow'] .db-bar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.pane[data-size='narrow'] .db-tabs {
+  max-width: 100%;
+}
+
+/* 自定义动效遵守用户减少动态效果的偏好。 */
+@media (prefers-reduced-motion: reduce) {
+  .db-tab,
+  .db-card {
+    transition: none;
+  }
+}

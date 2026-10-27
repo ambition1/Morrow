@@ -193,7 +193,10 @@ export function PageView({ id, find, anchor }: { id: PageId; find: string | null
         )}
         {page.kind !== 'database' && !unreadable && <Outline doc={doc} />}
         <CoverBanner page={page} editable={!trashed} />
-        <article className={`page font-${prefs.font} width-${prefs.width}${page.cover ? ' has-cover' : ''}`}>
+        <article
+          data-kind={page.kind}
+          className={`page font-${prefs.font} width-${prefs.width}${page.cover ? ' has-cover' : ''}`}
+        >
           {!trashed && <ConflictBanner id={id} />}
           {page.icon && (
             <div className="page-icon-row">
