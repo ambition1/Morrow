@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
 import { applyFonts } from './platform/fonts';
+import { useGlassLight } from './useGlassLight';
 import { ACTIONS, matchesShortcut, runAction } from './actions';
 import { CommandPalette } from './components/CommandPalette';
 import { Dialogs } from './components/Dialogs';
@@ -314,6 +315,7 @@ export function App() {
   useEffect(() => startTabs(), []);
   useStartPage();
   useLifecycle();
+  useGlassLight();
 
   useEffect(() => {
     setUi({ mobileSidebar: false });

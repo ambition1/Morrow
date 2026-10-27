@@ -28,11 +28,11 @@ Morrow 是以内容为中心的安静写作工具。沿用浅层界面、克制�
 - 页面、分组和弹层使用 `--bg`、`--surface`、`--popover`、`--bg-sidebar`。
 - 正文、辅助说明和弱提示分别使用 `--text`、`--text-muted`、`--text-faint`。
 - 边框、强调、危险和焦点使用 `--border`、`--border-strong`、`--accent`、`--danger`、`--focus` 等对应令牌。
-- 圆角沿用 `--radius-sm`（4px）、`--radius`（6px）与 `--radius-lg`（10px）；阴影使用现有弹层或对话框令牌。
+- 圆角通过共享令牌统一控制：`--radius-sm`（8px）、`--radius`（10px）、`--radius-lg`（16px），大面板使用 `--radius-panel`（24px）；阴影使用材质或原有弹层令牌。
 - UI 字号使用 `--text-xs`、`--text-sm`、`--text-ui`、`--text-md`，不为新增设置项创建自己的字号体系。
 - 界面字体由 `--font-ui` 和字体偏好统一管理。正文的系统、无衬线、衬线、等宽和自定义字体使用已有字体变量；禁止为某个新增控件单独指定字体。
 - 图标使用项目已有的 Lucide 图标和 `Logo`，尺寸与相邻按钮一致。页面内容中的表情图标属于既有功能，不用于新增操作按钮的装饰。
-- 不添加渐变卡片、玻璃背景、大阴影、营销页式标题、无关动画或新的强调色体系。
+- 不添加无关渐变卡片、大阴影、营销页式标题或新的强调色体系。用户指定的 Apple 风格玻璃效果仅用于导航和独立浮层，正文与数据表保持稳定的阅读表面。
 
 ## 表单控件
 
@@ -100,3 +100,9 @@ Web 专属的退出登录、存储位置、错误反馈也放入现有设置行�
 分区样式按 `shell.css`、`collections.css`、`workspace-views.css`、`dialogs-settings.css` 管理，位于原有基础样式之后；每个文件只负责自己的选择器区域。新增控件仍先复用原组件，避免重复皮肤。
 
 借鉴 [ai-design-skills](https://github.com/elayadesign/ai-design-skills) 和 [redesign-skill](https://github.com/elayadesign/redesign-skill) 的审查方法：先扫描和诊断，再按共享基础、页面结构、交互状态逐项修复。它们的营销页面结构、指定字体与图标、宣传滚动动画不替代本项目已有约束。
+
+## Apple 风格玻璃材质
+
+`glass.css` 统一圆角、主题材质和高光。对话框、菜单、命令面板及画布工具条使用较厚的半透明表面、背景模糊与细边缘高光；内部表单、设置分组和正文保持实色，避免多层透明叠加损失对比度。指针高光通过逐帧合并更新局部 CSS 变量，不阻止点击或编辑，不修改拖拽物体的定位。
+
+浮层只做短暂透明度和缩放入场，不循环闪动，不动画模糊半径。`prefers-reduced-motion` 取消入场与动态高光；`prefers-reduced-transparency`、强制颜色和不支持模糊时使用实色。玻璃是 Web 平台的风格实现，不等同于系统原生 Liquid Glass 的光学折射。

@@ -12,6 +12,7 @@ import './app/styles/shell.css';
 import './app/styles/collections.css';
 import './app/styles/workspace-views.css';
 import './app/styles/dialogs-settings.css';
+import './app/styles/glass.css';
 import 'katex/dist/katex.min.css';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';

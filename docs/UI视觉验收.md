@@ -1,5 +1,13 @@
 # UI 视觉验收
 
+## 2026-10-28 玻璃材质与圆角
+
+应用 apple-design 技能：导航、对话框、菜单、命令面板和画布工具条采用主题感知的磨砂材质；正文及数据表保留实色阅读面。共享圆角更新为8/10/16px，大面板24px。桌面主框架增加8px呼吸空间，手机恢复满宽内容和圆角抽屉。
+
+浏览器实测：设置弹窗背景模糊24px、圆角24px；指针移动后局部高光坐标随之更新。375×720深色设置无横向溢出，弹窗内容可滚动；减少动态和透明度同时开启时，实际样式为 `animation: none`、`backdrop-filter: none`，背景为实色。主题及视口模拟已恢复。测试使用独立预览标签，未刷新用户正在进行的复习或提交评分。
+
+高光通过单个被动指针监听及requestAnimationFrame合并更新，不拦截点击、选择和拖拽。Web效果模拟材质层次，不宣称实现系统原生Liquid Glass的实时光学折射。
+
 ## 2026-10-28 全页面重构
 
 基于 [ai-design-skills](https://github.com/elayadesign/ai-design-skills) 及其 [redesign-existing-projects](https://github.com/elayadesign/redesign-skill/tree/main/skills/redesign-existing-projects) 的扫描、诊断、局部修复流程，采用主代理整合、三个 subagent 分区实施、交叉审查的方式完成。系统默认字体、中文文案、用户自定义字体与真实封面继续保留；不套用营销页面的字体、宣传动画或虚构数据。
