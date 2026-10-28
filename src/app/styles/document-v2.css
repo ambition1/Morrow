@@ -1,0 +1,105 @@
+/**
+ * 功能：实现第二版圆角工作空间的笔记阅读层级、独立大纲和全宽数据库页面布局。
+ * 作者：xuanli
+ * 创建时间：2026-10-28 11:48:31
+ */
+
+/* 笔记保留用户的正文宽度与字体选项，通过留白建立清晰的阅读起点。 */
+.document-page {
+  padding-top: 38px;
+}
+
+.document-page .page-title {
+  margin-top: 16px;
+  margin-bottom: 20px;
+  line-height: 1.28;
+}
+
+.document-page > .page-title-heading + .page-tags {
+  margin-bottom: 22px;
+}
+
+/* 仅调整正文直属标题，嵌入数据库和分栏内部仍由既有组件控制。 */
+.document-page > .editor-surface > .prose > :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 32px;
+  line-height: 1.4;
+}
+
+.document-page > .editor-surface > .prose > :is(h1, h2) {
+  margin-top: 1.7em;
+  margin-bottom: 0.6em;
+}
+
+/* 大纲占据独立阅读边栏，避免覆盖舒适或宽屏正文。 */
+.app:not(.focus-mode) .document-view:has(.page-outline.is-roomy) .document-page {
+  max-width: min(calc(var(--page-width) + 112px), calc(100% - 250px));
+  margin-right: 250px;
+  margin-left: auto;
+}
+
+.document-view .page-outline {
+  top: 82px;
+  right: 24px;
+  width: 202px;
+  padding: 0 0 0 22px;
+  border-left: 1px solid var(--border);
+}
+
+.document-view .page-outline-title {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-bottom: 16px;
+  text-transform: none;
+}
+
+.document-view .outline-link {
+  min-height: 32px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.document-view .page-outline li.is-active > .outline-link {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.document-view .outline-fold {
+  top: 8px;
+}
+
+/* 数据库页面的布局与笔记、嵌入数据库隔离，为数据操作保留横向空间。 */
+.database-page {
+  max-width: none;
+  padding: 26px 32px 20vh;
+}
+
+.database-page .page-title {
+  margin-top: 10px;
+  margin-bottom: 22px;
+  font-size: 32px;
+  line-height: 1.3;
+}
+
+.database-page.font-mono .page-title {
+  font-size: 30px;
+}
+
+/* 窄分栏和移动端恢复完整宽度，避免固定大纲挤压正文。 */
+.pane[data-size='narrow'] .document-page,
+.pane[data-size='narrow'] .database-page {
+  padding: 24px 24px 25vh;
+}
+
+@media (max-width: 700px) {
+  .document-page,
+  .database-page {
+    padding: 24px 22px 25vh;
+  }
+
+  .document-page .page-title,
+  .database-page .page-title {
+    font-size: 30px;
+  }
+}

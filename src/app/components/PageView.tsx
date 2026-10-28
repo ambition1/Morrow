@@ -169,7 +169,7 @@ export function PageView({ id, find, anchor }: { id: PageId; find: string | null
   }
 
   return (
-    <div className="view">
+    <div className={`view${page.kind === 'database' ? ' database-document-view' : ' document-view'}`}>
       <TopBar page={page} editing={editing} menu={menu} />
       <div className="page-scroll">
         {trashed && (
@@ -195,7 +195,7 @@ export function PageView({ id, find, anchor }: { id: PageId; find: string | null
         <CoverBanner page={page} editable={!trashed} />
         <article
           data-kind={page.kind}
-          className={`page font-${prefs.font} width-${prefs.width}${page.cover ? ' has-cover' : ''}`}
+          className={`page ${page.kind === 'database' ? 'database-page' : 'document-page'} font-${prefs.font} width-${prefs.width}${page.cover ? ' has-cover' : ''}`}
         >
           {!trashed && <ConflictBanner id={id} />}
           {page.icon && (
@@ -646,7 +646,12 @@ function Outline({ doc }: { doc: DocNode }) {
     };
   }, [enough, doc]);
   if (!enough) return null;
-  const jump = (index: number) => elements()[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 大纲只定位现有正文，不修改内容；减少动态效果时使用即时滚动。
+  const jump = (index: number) =>
+    elements()[index]?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    });
   // a heading owns the smaller headings after it, up to the next one of its size or bigger
   const hasChildren = (index: number) => (headings[index + 1]?.level ?? 0) > headings[index]!.level;
   const hidden = new Set<number>();
@@ -694,7 +699,13 @@ function Outline({ doc }: { doc: DocNode }) {
                   <ChevronRight size={12} />
                 </button>
               )}
-              <button type="button" className="outline-link" onClick={() => jump(index)}>
+              <button
+                type="button"
+                className="outline-link"
+                aria-current={index === marked ? 'location' : undefined}
+                title={heading.text}
+                onClick={() => jump(index)}
+              >
                 {heading.text}
               </button>
             </li>

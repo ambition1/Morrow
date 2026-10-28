@@ -11,10 +11,6 @@
   --glass-edge: rgba(255, 255, 255, 0.72);
   --glass-light: rgba(255, 255, 255, 0.32);
   --glass-shadow: 0 12px 36px rgba(30, 25, 20, 0.1);
-  --radius-sm: 8px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --radius-panel: 24px;
 }
 
 :root[data-theme='dark'] {
@@ -27,8 +23,8 @@
 
 /* 控件圆角由共享变量传递；数据单元格与正文内容保持原有结构。 */
 .app {
-  gap: 8px;
-  padding: 8px;
+  gap: var(--workspace-gap);
+  padding: var(--workspace-gap);
   background: var(--bg-sidebar);
 }
 

@@ -1,5 +1,5 @@
 import { Check, ExternalLink, Plus, X } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { formatValue, formulaResult } from '../../../core/database';
 import { displayTitle } from '../../i18n/labels';
 import { findPagesByTitle, resolveLinkTarget } from '../../../core/search';
@@ -125,15 +125,22 @@ export function PropertyInput({
   prop,
   row,
   editable,
+  tableCell = false,
 }: {
   dbId: PageId;
   prop: PropDef;
   row: PageMeta;
   editable: boolean;
+  /** 表格中的基础属性先展示内容，激活后再编辑。 */
+  tableCell?: boolean;
 }) {
   const value = row.properties[prop.id] ?? null;
   const [picker, setPicker] = useState<HTMLElement | null>(null);
   const label = t('properties.valueOf', { key: prop.name, title: displayTitle(row) });
+
+  if (tableCell && ['text', 'number', 'date', 'url'].includes(prop.type)) {
+    return <TableValueEditor prop={prop} row={row} editable={editable} />;
+  }
 
   switch (prop.type) {
     case 'formula':
@@ -273,6 +280,94 @@ export function PropertyInput({
   }
 }
 
+// 表格基础单元格：静态阅读、键盘激活，并复用原有草稿提交规则。
+function TableValueEditor({ prop, row, editable }: { prop: PropDef; row: PageMeta; editable: boolean }) {
+  // 当前单元格是否已进入编辑状态。
+  const [editing, setEditing] = useState(false);
+  // 返回静态模式后可恢复键盘焦点的展示按钮。
+  const trigger = useRef<HTMLButtonElement>(null);
+  // 键盘结束编辑时恢复当前单元格焦点，鼠标离开时不抢焦点。
+  const keyboardDone = useRef(false);
+  // 当前持久化的属性值。
+  const value = row.properties[prop.id] ?? null;
+  // 包含属性名与记录名的可访问名称。
+  const label = t('properties.valueOf', { key: prop.name, title: displayTitle(row) });
+  if (!editing)
+    return (
+      <span className="db-cell-static">
+        <button
+          ref={trigger}
+          type="button"
+          className="db-cell-display"
+          aria-label={label}
+          disabled={!editable}
+          onClick={() => {
+            keyboardDone.current = false;
+            setEditing(true);
+          }}
+        >
+          <PropertyDisplay prop={prop} value={value} />
+        </button>
+        {prop.type === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) && (
+          <button
+            type="button"
+            className="icon-button tiny db-cell-link"
+            aria-label={t('editor.openLink')}
+            onClick={() => openExternal(value)}
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
+      </span>
+    );
+  return (
+    <span
+      className="db-cell-editor"
+      onKeyDownCapture={(event) => {
+        keyboardDone.current =
+          !event.nativeEvent.isComposing &&
+          event.nativeEvent.keyCode !== 229 &&
+          (event.key === 'Enter' || event.key === 'Escape');
+      }}
+    >
+      <DraftInput
+        type={
+          prop.type === 'number'
+            ? 'number'
+            : prop.type === 'date'
+              ? 'date'
+              : prop.type === 'url'
+                ? 'url'
+                : 'text'
+        }
+        label={label}
+        value={value === null ? '' : String(value)}
+        editable={editable}
+        autoFocus
+        onCommit={(text) => {
+          // 数字仅保存有限值，其他属性沿用原来的空值与去空格语义。
+          const number = Number(text);
+          setValue(
+            row.id,
+            prop.id,
+            prop.type === 'number'
+              ? text.trim() && Number.isFinite(number)
+                ? number
+                : null
+              : prop.type === 'text'
+                ? text || null
+                : text.trim() || null,
+          );
+        }}
+        onDone={() => {
+          setEditing(false);
+          if (keyboardDone.current) requestAnimationFrame(() => trigger.current?.focus());
+        }}
+      />
+    </span>
+  );
+}
+
 // keeps typing local and saves on blur or enter, so every keystroke is not a separate change
 export function DraftInput({
   type,
@@ -285,7 +380,7 @@ export function DraftInput({
   autoFocus,
   onDone,
 }: {
-  type: 'text' | 'number' | 'url';
+  type: 'text' | 'number' | 'url' | 'date';
   label: string;
   value: string;
   editable: boolean;
@@ -297,8 +392,14 @@ export function DraftInput({
   onDone?: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  // 同步保存草稿，避免键盘事件触发 blur 时读到旧的 React 状态。
+  const draftRef = useRef<string | null>(null);
+  // 每次提交先清空引用，保证 Enter 与后续 blur 最多写入一次。
   const commit = () => {
-    if (draft !== null && draft !== value) onCommit(draft);
+    // 当前尚未提交的输入内容。
+    const pending = draftRef.current;
+    draftRef.current = null;
+    if (pending !== null && pending !== value) onCommit(pending);
     setDraft(null);
     onDone?.();
   };
@@ -311,15 +412,21 @@ export function DraftInput({
       placeholder={placeholder ?? (editable ? t('database.empty') : '')}
       value={draft ?? value}
       readOnly={!editable}
-      onChange={(event) => setDraft(event.target.value)}
+      onChange={(event) => {
+        draftRef.current = event.target.value;
+        setDraft(event.target.value);
+      }}
       onBlur={commit}
       onKeyDown={(event) => {
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
         if (event.key === 'Enter') {
           event.preventDefault();
           commit();
           event.currentTarget.blur();
         }
         if (event.key === 'Escape') {
+          event.preventDefault();
+          draftRef.current = null;
           setDraft(null);
           event.currentTarget.blur();
         }

@@ -1172,6 +1172,9 @@ export const zhCN: TranslationSchema = {
     placeRowsBy: '行排列依据',
     showProp: '显示 {name}',
     hideProp: '隐藏 {name}',
+    // 第二版表格的新建入口与行序号。
+    newRecord: '新建记录',
+    rowNumber: '序号',
     newRowOn: '在 {date} 新建行',
     progressBar: '进度条',
     firstRow: '第一行：{value}',

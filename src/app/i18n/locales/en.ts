@@ -1184,6 +1184,9 @@ export const en = {
     placeRowsBy: 'Place rows by',
     showProp: 'Show {name}',
     hideProp: 'Hide {name}',
+    // 第二版表格的新建入口与行序号。
+    newRecord: 'New record',
+    rowNumber: 'Row number',
     newRowOn: 'New row on {date}',
     progressBar: 'Progress bar',
     firstRow: 'First row: {value}',

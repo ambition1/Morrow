@@ -1196,6 +1196,9 @@ export const es: TranslationSchema = {
     placeRowsBy: 'Colocar filas según',
     showProp: 'Mostrar {name}',
     hideProp: 'Ocultar {name}',
+    // 第二版表格的新建入口与行序号。
+    newRecord: 'Nuevo registro',
+    rowNumber: 'Número de fila',
     newRowOn: 'Nueva fila el {date}',
     progressBar: 'Barra de progreso',
     firstRow: 'Primera fila: {value}',

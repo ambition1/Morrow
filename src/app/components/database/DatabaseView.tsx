@@ -1,5 +1,12 @@
 import {
   ArrowDownUp,
+  Type,
+  Hash,
+  CheckSquare,
+  Link2,
+  ListFilter,
+  CircleDot,
+  FunctionSquare,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -109,7 +116,7 @@ export function DatabaseView({ page, editable }: { page: PageMeta; editable: boo
   const visible = database.properties.filter((prop) => !view.hidden.includes(prop.id));
 
   return (
-    <section className="database" aria-label={t('sidebar.database')}>
+    <section className="database database-v2" aria-label={t('sidebar.database')}>
       <div className="db-bar">
         <div className="db-tabs" role="tablist" aria-label={t('database.views')}>
           {database.views.map((candidate) => {
@@ -146,7 +153,18 @@ export function DatabaseView({ page, editable }: { page: PageMeta; editable: boo
             </button>
           )}
         </div>
+      </div>
+      <div className="db-action-bar">
         <Toolbar dbId={page.id} database={database} view={view} rows={allRows} editable={editable} />
+        {editable && (
+          <button
+            type="button"
+            className="button primary db-create-record"
+            onClick={() => newRowAndOpen(page.id, {})}
+          >
+            <Plus size={15} /> {t('database.newRecord')}
+          </button>
+        )}
       </div>
       {editable && <ColumnSuggestion dbId={page.id} database={database} rows={allRows} />}
 
@@ -731,9 +749,9 @@ function RowTitle({ row, editable, autoFocus }: { row: PageMeta; editable: boole
         value={row.title}
         placeholder={t('page.untitled')}
         editable={editable}
+        autoFocus={autoFocus}
         onCommit={(title) => run({ type: 'page.rename', id: row.id, title, now: Date.now() })}
       />
-      {autoFocus && <FocusLast />}
       <button
         type="button"
         className="icon-button tiny db-open"
@@ -745,15 +763,6 @@ function RowTitle({ row, editable, autoFocus }: { row: PageMeta; editable: boole
       </button>
     </div>
   );
-}
-
-// moves focus into the title of a row just added to a table
-function FocusLast() {
-  useEffect(() => {
-    const inputs = document.querySelectorAll<HTMLInputElement>('.db-table .db-title-input');
-    inputs[inputs.length - 1]?.focus();
-  }, []);
-  return null;
 }
 
 const TITLE_WIDTH = 260;
@@ -802,6 +811,28 @@ function ColumnResizer({
   );
 }
 
+// 根据属性类型显示表头图标，沿用现有 Lucide 图标体系。
+function PropertyTypeIcon({ prop }: { prop: PropDef }) {
+  // 属性类型对应的图标，不改变列的功能或数据。
+  const Icon =
+    prop.type === 'number'
+      ? Hash
+      : prop.type === 'date'
+        ? Calendar
+        : prop.type === 'checkbox'
+          ? CheckSquare
+          : prop.type === 'url' || prop.type === 'relation'
+            ? Link2
+            : prop.type === 'select'
+              ? CircleDot
+              : prop.type === 'multiSelect'
+                ? ListFilter
+                : prop.type === 'formula'
+                  ? FunctionSquare
+                  : Type;
+  return <Icon size={14} aria-hidden="true" />;
+}
+
 function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
   const [header, setHeader] = useState<{ prop: PropDef; anchor: HTMLElement } | null>(null);
   const [adding, setAdding] = useState<HTMLElement | null>(null);
@@ -831,11 +862,12 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
       />
     );
   const total =
-    widthOf(TITLE_PROP) + props.reduce((sum, prop) => sum + widthOf(prop.id), 0) + (editable ? 36 : 0);
+    44 + widthOf(TITLE_PROP) + props.reduce((sum, prop) => sum + widthOf(prop.id), 0) + (editable ? 36 : 0);
   return (
     <div className="db-table-wrap">
       <table className={`db-table${editable ? ' is-filled' : ''}`} style={{ width: total }}>
         <colgroup>
+          <col style={{ width: 44 }} />
           <col style={{ width: widthOf(TITLE_PROP) }} />
           {props.map((prop) => (
             <col key={prop.id} style={{ width: widthOf(prop.id) }} />
@@ -845,8 +877,13 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
         </colgroup>
         <thead>
           <tr>
+            <th scope="col" className="db-row-number" aria-label={t('database.rowNumber')}>
+              #
+            </th>
             <th scope="col" className="db-col-title">
-              {t('database.name')}
+              <span className="db-heading-label">
+                <Type size={14} /> {t('database.name')}
+              </span>
               {resizer(TITLE_PROP)}
             </th>
             {props.map((prop) => (
@@ -857,7 +894,7 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
                   disabled={!editable}
                   onClick={(event) => setHeader({ prop, anchor: event.currentTarget })}
                 >
-                  {prop.name}
+                  <PropertyTypeIcon prop={prop} /> {prop.name}
                 </button>
                 {resizer(prop.id)}
               </th>
@@ -877,14 +914,15 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <tr key={row.id}>
+              <td className="db-row-number">{index + 1}</td>
               <td className="db-col-title">
                 <RowTitle row={row} editable={editable} autoFocus={focusNew === row.id} />
               </td>
               {props.map((prop) => (
                 <td key={prop.id}>
-                  <PropertyInput dbId={dbId} prop={prop} row={row} editable={editable} />
+                  <PropertyInput dbId={dbId} prop={prop} row={row} editable={editable} tableCell />
                 </td>
               ))}
               {editable && <td />}

@@ -15,9 +15,11 @@
   --text-ui: 13.5px;
   --text-md: 14.5px;
 
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  /* 两块独立工作空间面板使用统一的大圆角。 */
+  --radius-panel: 24px;
 
   /* 工作空间的共享间距与标题尺度，供各页面区域统一引用。 */
   --space-1: 4px;
@@ -30,9 +32,11 @@
   --page-gutter: clamp(20px, 4vw, 48px);
   --page-heading: clamp(28px, 3vw, 36px);
   --content-width: 960px;
+  /* 第二版圆角工作空间的外沿与面板间距共用同一尺度。 */
+  --workspace-gap: 10px;
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  /* 共用控件的反馈时长，保持设置、导航与登录入口的交互节奏一致。 */
+  /* 共用控件的反馈时长，保持设置、导航与浮层的交互节奏一致。 */
   --duration-fast: 120ms;
   --duration-normal: 180ms;
 
