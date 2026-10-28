@@ -1,36 +1,15 @@
 /**
- * 功能：提供多账号认证、隔离的笔记库存储和静态 Web 服务。
+ * 功能：提供免登录的家庭共享笔记库存储和静态 Web 服务。
  * 作者：xuanli
  * 创建时间：2026-10-25 23:38:01
  */
 import http from 'node:http';
 import path from 'node:path';
 import { constants, promises as fs } from 'node:fs';
-import { randomBytes, scrypt as derive, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+import { randomBytes } from 'node:crypto';
 
-/** 异步密码派生函数，避免明文保存密码。 */
-const scrypt = promisify(derive);
 /** 单次上传最大字节数，与客户端附件上限保持一致。 */
 const MAX_BODY = 105 * 1024 * 1024;
-/** 登录有效期为七天，服务重启后需要重新登录。 */
-const SESSION_MS = 7 * 86400_000;
-
-/** 生成包含随机盐值的密码摘要。 */
-export async function hashPassword(password) {
-  /** 每个密码使用独立随机盐值。 */
-  const salt = randomBytes(16).toString('hex');
-  return `${salt}:${(await scrypt(password, salt, 64)).toString('hex')}`;
-}
-
-/** 以恒定时间比较密码派生结果。 */
-async function verifyPassword(password, encoded) {
-  /** 解析存储的盐值与密码摘要。 */
-  const [salt, digest] = encoded.split(':');
-  /** 当前输入密码的派生结果。 */
-  const actual = await scrypt(password, salt, 64);
-  return digest?.length === 128 && timingSafeEqual(actual, Buffer.from(digest, 'hex'));
-}
 
 /** 原子替换文件，进程退出时不会留下半个文件。 */
 async function atomicWrite(target, data) {
@@ -58,28 +37,6 @@ async function readOrNull(target, encoding) {
 /** 生成附带状态码的业务错误。 */
 function failure(status, message) {
   return Object.assign(new Error(message), { status });
-}
-
-/** 校验用户名，仅允许安全的目录标识符。 */
-function validateUser(username) {
-  if (typeof username !== 'string' || !/^[a-zA-Z0-9_-]{3,48}$/.test(username))
-    throw failure(400, '用户名须为 3–48 位字母、数字、下划线或连字符。');
-}
-
-/** 管理员离线创建账号；密码不在日志或用户记录中明文出现。 */
-export async function createUser(dataDir, username, password) {
-  validateUser(username);
-  if (typeof password !== 'string' || password.length < 12 || password.length > 256)
-    throw failure(400, '密码须为 12–256 个字符。');
-  /** 账号目录位于笔记库之外，无法通过文件接口访问。 */
-  const accountDir = path.join(path.resolve(dataDir), 'accounts');
-  await fs.mkdir(accountDir, { recursive: true });
-  /** 账号记录只包含摘要及创建时间。 */
-  const record = { username, passwordHash: await hashPassword(password), createdAt: Date.now() };
-  await fs.writeFile(path.join(accountDir, `${username}.json`), JSON.stringify(record), {
-    flag: 'wx',
-    mode: 0o600,
-  });
 }
 
 /** 解析用户提供的相对路径，并拒绝任何符号链接和目录逃逸。 */
@@ -115,7 +72,7 @@ function hidden(relative) {
   return relative.split('/').some((part) => part.startsWith('.') && part !== '.trash');
 }
 
-/** 扫描一个账号的笔记库，符号链接不进入结果。 */
+/** 扫描家庭共享笔记库，符号链接不进入结果。 */
 async function scanVault(root) {
   /** 返回给现有 VaultRepository 的文件结构。 */
   const result = { files: [], folders: [], others: [], registry: null, recent: null };
@@ -152,7 +109,7 @@ async function scanVault(root) {
     ['registry', 'workspace.json'],
     ['recent', 'recent.json'],
   ]) {
-    /** 注册表仅从账号自己的内部目录读取。 */
+    /** 注册表仅从共享笔记库的内部目录读取。 */
     const text = await readOrNull(await safePath(root, `.morrow/${file}`), 'utf8');
     if (text) result[key] = JSON.parse(text);
   }
@@ -179,7 +136,7 @@ async function applyOne(root, op) {
       break;
     }
     case 'rename': {
-      /** 重命名后的路径也必须位于当前账号笔记库中。 */
+      /** 重命名后的路径也必须位于共享笔记库中。 */
       const destination = await safePath(root, op.to);
       if (await readExists(destination)) return { ok: false, code: 'exists', message: '目标文件已存在。' };
       if (!(await readExists(target)) && op.optional) break;
@@ -193,7 +150,7 @@ async function applyOne(root, op) {
       break;
     case 'remove':
       if (await readExists(target)) {
-        /** 删除的文件保留到账号内部删除目录中。 */
+        /** 删除的文件保留到笔记库内部删除目录中。 */
         const deleted = await safePath(
           root,
           `.morrow/deleted/${Date.now()}-${randomBytes(6).toString('hex')}-${path.basename(target)}`,
@@ -240,38 +197,28 @@ async function body(request, limit = MAX_BODY) {
   return Buffer.concat(chunks);
 }
 
-/** 创建可测试的 HTTP 服务；账号、文件和会话均在服务端隔离。 */
-export async function createApp({ dataDir, distDir, secureCookie = true }) {
-  /** 规范化的数据根目录，仅管理员配置。 */
+/** 创建可测试的共享 HTTP 服务，所有设备访问同一笔记库。 */
+export async function createApp({ dataDir, distDir }) {
+  /** 规范化的数据根目录，仅由部署环境配置。 */
   const dataRoot = path.resolve(dataDir);
   /** 静态构建目录，不能与数据目录混用。 */
   const publicRoot = path.resolve(distDir);
-  await fs.mkdir(path.join(dataRoot, 'vaults'), { recursive: true });
-  /** 随机会话令牌只通过 HttpOnly Cookie 返回。 */
-  const sessions = new Map();
-  /** 每账号串行队列防止并发文件批次互相穿插。 */
-  const queues = new Map();
-  /** 每账号独立的版本号，进程重启后旧会话同时失效。 */
-  const revisions = new Map();
-  /** 启动世代使旧标签页的版本在重启后永不碰撞。 */
+  /** 继续使用现有服务器笔记库目录，不迁移或重建已有数据。 */
+  const root = path.join(dataRoot, 'vaults', 'local');
+  await fs.mkdir(root, { recursive: true });
+  /** 全库串行队列防止不同设备的文件批次互相穿插。 */
+  let queue = Promise.resolve();
+  /** 全库共享版本，配合启动世代拒绝陈旧客户端覆盖。 */
+  let revision = 0;
+  /** 进程重启后版本计数即使归零也不会与旧标签页碰撞。 */
   const epoch = randomBytes(16).toString('hex');
-  /** 登录失败次数按账号记录，限制暴力猜测。 */
-  const attempts = new Map();
-  /** 同时进行的密码派生数量，限制资源消耗。 */
-  let activeLogins = 0;
-  /** 不存在的账号也执行密码派生，降低账号枚举风险。 */
-  const dummyHash = await hashPassword(randomBytes(32).toString('hex'));
 
-  /** 在账号队列中执行一次读取或写入。 */
-  async function serialized(username, action) {
-    /** 上次请求即使失败也不会阻塞后续操作。 */
-    const next = (queues.get(username) ?? Promise.resolve()).catch(() => {}).then(action);
-    queues.set(username, next);
-    try {
-      return await next;
-    } finally {
-      if (queues.get(username) === next) queues.delete(username);
-    }
+  /** 在唯一共享队列中执行一次读取或写入。 */
+  async function serialized(action) {
+    /** 前一个请求失败也不能阻塞之后的操作。 */
+    const next = queue.catch(() => {}).then(action);
+    queue = next;
+    return next;
   }
   /** 发送 JSON，禁止缓存敏感内容。 */
   function json(response, status, value) {
@@ -281,12 +228,7 @@ export async function createApp({ dataDir, distDir, secureCookie = true }) {
     });
     response.end(JSON.stringify(value));
   }
-  /** 生成设置或清除认证 Cookie 的响应头。 */
-  function cookie(token, maxAge) {
-    return `morrow_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureCookie ? '; Secure' : ''}`;
-  }
-
-  /** 按路由处理请求，所有笔记接口均先验证会话。 */
+  /** 按路由处理请求，共享接口保留路径和同源边界检查。 */
   async function handle(request, response) {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'same-origin');
@@ -301,7 +243,7 @@ export async function createApp({ dataDir, distDir, secureCookie = true }) {
         request.headers['sec-fetch-site'] === 'cross-site')
     )
       throw failure(403, '禁止跨站请求。');
-    // 健康检查只返回状态，不暴露账号、文件路径或会话。
+    // 健康检查只返回状态，不暴露文件路径或笔记内容。
     if (url.pathname === '/api/health' && request.method === 'GET') {
       try {
         await fs.access(path.join(publicRoot, 'index.html'), constants.R_OK);
@@ -311,72 +253,9 @@ export async function createApp({ dataDir, distDir, secureCookie = true }) {
         return json(response, 503, { ok: false });
       }
     }
-    if (url.pathname === '/api/login' && request.method === 'POST') {
-      /** 登录请求限制为 4 KB。 */
-      const input = JSON.parse((await body(request, 4096)).toString());
-      validateUser(input.username);
-      if (typeof input.password !== 'string' || input.password.length > 256) throw failure(400, '密码无效。');
-      /** 按账号记录十分钟窗口内的失败次数。 */
-      const attempt = attempts.get(input.username) ?? { count: 0, until: Date.now() + 600_000 };
-      if (attempt.until < Date.now()) {
-        attempt.count = 0;
-        attempt.until = Date.now() + 600_000;
-      }
-      if (activeLogins >= 4) throw failure(429, '登录请求繁忙，请稍后重试。');
-      if (attempt.count >= 10) throw failure(429, '登录尝试过多，请十分钟后重试。');
-      // 异步派生前预留次数，不能通过并发请求绕过限制。
-      if (attempts.size > 10_000 && !attempts.has(input.username)) {
-        for (const [name, record] of attempts) if (record.until < Date.now()) attempts.delete(name);
-        if (attempts.size > 10_000) throw failure(429, '登录请求繁忙，请稍后重试。');
-      }
-      attempt.count++;
-      attempts.set(input.username, attempt);
-      activeLogins++;
-      try {
-        /** 账号文件的路径只由已校验用户名构成。 */
-        const text = await readOrNull(path.join(dataRoot, 'accounts', `${input.username}.json`), 'utf8');
-        /** 不存在账号仍使用虚拟摘要进行相同计算。 */
-        const valid = await verifyPassword(input.password, text ? JSON.parse(text).passwordHash : dummyHash);
-        if (!text || !valid) {
-          throw failure(401, '用户名或密码错误。');
-        }
-      } finally {
-        activeLogins--;
-      }
-      attempts.delete(input.username);
-      /** 新会话使用不可预测的 256 位令牌。 */
-      const token = randomBytes(32).toString('hex');
-      for (const [key, session] of sessions) if (session.expires < Date.now()) sessions.delete(key);
-      sessions.set(token, { username: input.username, expires: Date.now() + SESSION_MS });
-      response.setHeader('Set-Cookie', cookie(token, SESSION_MS / 1000));
-      return json(response, 200, { username: input.username, epoch });
-    }
     if (url.pathname.startsWith('/api/')) {
-      /** Cookie 中只提取认证令牌，不允许客户端指定账号目录。 */
-      const token = /(?:^|;\s*)morrow_session=([a-f0-9]{64})(?:;|$)/.exec(request.headers.cookie ?? '')?.[1];
-      /** 会话决定当前用户的身份。 */
-      const session = sessions.get(token);
-      if (!session || session.expires < Date.now()) {
-        sessions.delete(token);
-        throw failure(401, '请先登录，或会话已过期。');
-      }
-      if (url.pathname === '/api/session' && request.method === 'GET')
-        return json(response, 200, { username: session.username });
-      if (request.headers['x-morrow-user'] && request.headers['x-morrow-user'] !== session.username)
-        throw failure(409, '账号已在其他标签页切换，请刷新后重新登录。');
-      if (url.pathname.startsWith('/api/vault/') && request.headers['x-morrow-user'] !== session.username)
-        throw failure(409, '工作区与登录账号不一致，请刷新页面。');
-      if (url.pathname === '/api/logout' && request.method === 'POST') {
-        sessions.delete(token);
-        response.setHeader('Set-Cookie', cookie('', 0));
-        return json(response, 200, { ok: true });
-      }
-      return serialized(session.username, async () => {
-        /** 只从会话构造笔记库路径，实现账号隔离。 */
-        const root = path.join(dataRoot, 'vaults', session.username);
-        await fs.mkdir(root, { recursive: true });
-        /** 当前账号的存储版本。 */
-        let revision = revisions.get(session.username) ?? 0;
+      if (!url.pathname.startsWith('/api/vault/')) throw failure(404, '接口不存在。');
+      return serialized(async () => {
         response.setHeader('X-Morrow-Revision', `${epoch}:${revision}`);
         if (request.method === 'GET') {
           if (url.pathname === '/api/vault/revision')
@@ -429,7 +308,6 @@ export async function createApp({ dataDir, distDir, secureCookie = true }) {
             throw failure(409, '笔记库已在其他设备更新，请先备份未保存内容并刷新页面。');
           /** 每次写入尝试都使旧客户端失效，部分成功也不能盲目重放。 */
           revision++;
-          revisions.set(session.username, revision);
           response.setHeader('X-Morrow-Revision', `${epoch}:${revision}`);
           if (url.pathname === '/api/vault/file') {
             /** 附件目标路径必须由服务端验证。 */

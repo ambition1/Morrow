@@ -37,7 +37,6 @@
     "build:web": "tsc -p tsconfig.json && vite build --mode web",
     "preview:web": "vite preview --host 0.0.0.0",
     "start:web": "node server/index.mjs",
-    "user:create": "node server/index.mjs create-user",
     "test:web": "node --test server/*.test.mjs"
   },
   "devDependencies": {

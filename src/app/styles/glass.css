@@ -73,8 +73,7 @@
   }
 
   /* 导航是较厚的基础材质；内部按钮和设置分组使用实色表面。 */
-  .sidebar,
-  .web-login-sidebar {
+  .sidebar {
     background: var(--glass-chrome);
     -webkit-backdrop-filter: blur(20px) saturate(125%);
     backdrop-filter: blur(20px) saturate(125%);
@@ -149,8 +148,7 @@
     box-shadow: var(--shadow-popover);
   }
 
-  .sidebar,
-  .web-login-sidebar {
+  .sidebar {
     background: var(--bg-sidebar);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

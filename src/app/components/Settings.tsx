@@ -17,8 +17,6 @@ import {
   unusedFiles,
 } from '../operations';
 import { formatBytes } from '../platform/attachments';
-import { commitEditors } from '../editor/commits';
-import { webRequest } from '../platform/webVault';
 import { desktop } from '../platform/desktop';
 import { ACCENTS, setPreferences, usePreferences } from '../platform/preferences';
 import type { PageWidth, StartPage, ThemePreference, WritingFont } from '../platform/preferences';
@@ -411,35 +409,6 @@ function VaultSettings() {
 
   return (
     <>
-      {!desktop && (
-        <SettingsGroup help={t('web.accountHelp')}>
-          <SettingRow label={t('web.account')}>
-            <button
-              className="button small"
-              type="button"
-              onClick={() => {
-                commitEditors();
-                void getSession()
-                  .flush()
-                  .then(async (saved) => {
-                    if (!saved) {
-                      toast(t('topBar.saveFailed'), { tone: 'error' });
-                      return;
-                    }
-                    await webRequest('/api/logout', {
-                      method: 'POST',
-                      headers: { 'X-Morrow-User': sessionStorage.getItem('morrow.webUser') ?? '' },
-                    });
-                    window.location.reload();
-                  })
-                  .catch(() => toast(t('web.requestFailed'), { tone: 'error' }));
-              }}
-            >
-              {t('web.logout')}
-            </button>
-          </SettingRow>
-        </SettingsGroup>
-      )}
       <SettingsGroup help={t(desktop ? 'settings.vault.groupHelp' : 'web.storageHelp')}>
         <SettingRow
           label={t('settings.vault.currentFolder')}

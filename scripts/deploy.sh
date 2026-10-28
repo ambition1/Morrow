@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 功能：统一管理 Compose 启停、账号创建、一致性备份和空卷恢复。
+# 功能：统一管理 家庭共享 Compose 启停、一致性备份和空卷恢复。
 # 作者：xuanli
 # 创建时间：2026-10-27 01:22:49
 set -euo pipefail
@@ -19,9 +19,9 @@ else
   COMPOSE_CMD+=(--env-file /dev/null)
 fi
 case "$DEPLOY_MODE" in
-  proxy) ;;
-  local|https) COMPOSE_CMD+=(-f "$DEPLOY_ROOT/compose.$DEPLOY_MODE.yaml") ;;
-  *) printf '用法：%s {https|proxy|local} {up|rollback|status|logs|stop|down|user-add|backup|restore} [参数]\n' "$0"; exit 1 ;;
+  proxy|local) ;;
+  https) COMPOSE_CMD+=(-f "$DEPLOY_ROOT/compose.https.yaml") ;;
+  *) printf '用法：%s {https|proxy|local} {up|rollback|status|logs|stop|down|backup|restore} [参数]\n' "$0"; exit 1 ;;
 esac
 
 # 备份期间的临时文件，失败后清理，避免误把半个备份当成完整文件。
@@ -75,26 +75,7 @@ acquire_lock() {
   printf '%s\n' "$$" > "$DEPLOY_LOCK/owner"
 }
 
-# 管理员密码只从终端或环境读取，不写入 .env、参数或日志。
-create_account() {
-  # 账号名称由服务端再次验证。
-  local username=${3:?请提供用户名}
-  if [[ -z "${MORROW_USER_PASSWORD:-}" ]]; then
-    # 密码确认值仅留在脚本内存。
-    local confirmation
-    IFS= read -r -s -p '新账号密码（至少12个字符）：' MORROW_USER_PASSWORD
-    printf '\n'
-    IFS= read -r -s -p '再次输入密码：' confirmation
-    printf '\n'
-    if [[ "$MORROW_USER_PASSWORD" != "$confirmation" ]]; then printf '两次密码不一致。\n' >&2; exit 1; fi
-    unset confirmation
-  fi
-  export MORROW_USER_PASSWORD
-  "${COMPOSE_CMD[@]}" exec -T -e MORROW_USER_PASSWORD morrow node server/index.mjs create-user "$username"
-  unset MORROW_USER_PASSWORD
-}
-
-# 暂停写入后备份完整账号和笔记库，退出时恢复原有服务状态。
+# 暂停写入后备份完整数据目录和共享笔记库，退出时恢复原有服务状态。
 backup_data() {
   # 允许指定备份位置，默认文件名使用 UTC 时间以便跨服务器排序。
   local output=${3:-"$DEPLOY_ROOT/backups/${DEPLOY_PROJECT}-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"}
@@ -118,7 +99,7 @@ backup_data() {
   printf '备份已保存：%s\n' "$output"
 }
 
-# 只向全新的空数据卷恢复，既有笔记与账号不会被覆盖或删除。
+# 只向全新的空数据卷恢复，既有笔记不会被覆盖或删除。
 restore_data() {
   # 只接受管理员自己通过本脚本生成的完整数据备份。
   local archive=${3:?请提供可信的 tar.gz 备份文件}
@@ -133,11 +114,11 @@ restore_data() {
   fi
   "${COMPOSE_CMD[@]}" run --rm --no-deps -T --entrypoint tar morrow \
     -C /app/data --no-same-owner --keep-old-files -xzf - < "$archive"
-  printf '数据已恢复到新数据卷。请启动服务并验证账号和笔记。\n'
+  printf '数据已恢复到新数据卷。请启动服务并验证共享笔记。\n'
 }
 
 case "$DEPLOY_ACTION" in
-  up|rollback|stop|down|user-add|backup|restore) acquire_lock ;;
+  up|rollback|stop|down|backup|restore) acquire_lock ;;
 esac
 
 case "$DEPLOY_ACTION" in
@@ -147,8 +128,7 @@ case "$DEPLOY_ACTION" in
   logs) "${COMPOSE_CMD[@]}" logs --tail 100 -f ;;
   stop) "${COMPOSE_CMD[@]}" stop ;;
   down) "${COMPOSE_CMD[@]}" down ;;
-  user-add) create_account "$@" ;;
   backup) backup_data "$@" ;;
   restore) restore_data "$@" ;;
-  *) printf '支持操作：up、rollback、status、logs、stop、down、user-add USER、backup [文件]、restore 文件。\n'; exit 1 ;;
+  *) printf '支持操作：up、rollback、status、logs、stop、down、backup [文件]、restore 文件。\n'; exit 1 ;;
 esac

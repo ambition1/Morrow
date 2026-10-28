@@ -25,7 +25,6 @@ services:
       MORROW_HOST: 0.0.0.0
       MORROW_DATA_DIR: /app/data
       PORT: 3000
-      MORROW_INSECURE_HTTP: '0'
     healthcheck:
       test: ['CMD', 'node', 'server/healthcheck.mjs']
       interval: 10s

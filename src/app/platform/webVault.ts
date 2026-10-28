@@ -1,5 +1,5 @@
 /**
- * 功能：通过认证 HTTP 会话连接服务器上当前账号的独立笔记库。
+ * 功能：通过同源 HTTP 连接家庭共享笔记库。
  * 作者：xuanli
  * 创建时间：2026-10-25 23:38:56
  */
@@ -7,10 +7,10 @@ import type { VaultBridge } from '../../storage/vaultBridge';
 import { t } from '../i18n';
 import { toast } from '../ui';
 
-/** 请求认证接口；Cookie 由浏览器保管，不把凭证保存到本地存储。 */
+/** 请求共享文件接口，并保留服务端错误与冲突信息。 */
 export async function webRequest(path: string, init?: RequestInit): Promise<Response> {
-  /** 相同来源的 Cookie 随请求自动发送。 */
-  const response = await fetch(path, { ...init, credentials: 'same-origin', cache: 'no-store' });
+  /** 共享请求不需要发送用户凭证或会话 Cookie。 */
+  const response = await fetch(path, { ...init, credentials: 'omit', cache: 'no-store' });
   if (!response.ok) {
     /** 将服务端中文错误或通用错误交给调用方显示。 */
     const error = (await response.json().catch(() => ({}))) as { error?: string };
@@ -23,7 +23,7 @@ export async function webRequest(path: string, init?: RequestInit): Promise<Resp
 }
 
 /** 创建使用版本检查保护的服务器文件桥接。 */
-export function webVaultBridge(username: string): VaultBridge {
+export function webVaultBridge(): VaultBridge {
   /** 当前客户端已知的服务端版本；只有加载和本客户端写入会推进。 */
   let revision = '0';
   /** 同一个浏览器的请求串行执行，避免自身触发版本冲突。 */
@@ -40,7 +40,7 @@ export function webVaultBridge(username: string): VaultBridge {
         /** 请求附带加载时的版本，服务端拒绝陈旧客户端覆盖数据。 */
         const response = await webRequest(`/api/vault/${route}`, {
           ...init,
-          headers: { ...init?.headers, 'X-Morrow-Revision': revision, 'X-Morrow-User': username },
+          headers: { ...init?.headers, 'X-Morrow-Revision': revision },
         });
         if (route === 'scan' || init?.method === 'POST')
           revision = response.headers.get('X-Morrow-Revision') ?? revision;
@@ -62,7 +62,7 @@ export function webVaultBridge(username: string): VaultBridge {
   }
 
   return {
-    root: `${t('web.storageName')} / ${username}`,
+    root: t('web.storageName'),
     scan: () => request('scan'),
     apply: (ops) =>
       request('apply', {
@@ -72,11 +72,10 @@ export function webVaultBridge(username: string): VaultBridge {
       }),
     readText: (path) => request(query('text', path)),
     readBytes: async (path) => {
-      /** 二进制附件通过认证端点读取，不直接暴露存储目录。 */
+      /** 二进制附件通过共享文件端点读取，不直接暴露存储目录。 */
       const response = await fetch(`/api/vault/${query('bytes', path)}`, {
-        credentials: 'same-origin',
+        credentials: 'omit',
         cache: 'no-store',
-        headers: { 'X-Morrow-User': username },
       });
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(t('web.requestFailed'));
@@ -96,9 +95,7 @@ export function webVaultBridge(username: string): VaultBridge {
           .catch(() => {})
           .then(async () => {
             /** 版本探测不改变当前工作区的基准版本。 */
-            const response = await webRequest('/api/vault/revision', {
-              headers: { 'X-Morrow-User': username },
-            });
+            const response = await webRequest('/api/vault/revision');
             /** 新版本只能通过刷新并重新加载完整工作区接收。 */
             const value = (await response.json()) as { revision: string };
             if (String(value.revision) !== revision && !notified) {
@@ -110,7 +107,7 @@ export function webVaultBridge(username: string): VaultBridge {
       }, 5000);
       return () => window.clearInterval(timer);
     },
-    // 附件必须先认证读取为 Blob URL，避免直接执行上传内容。
+    // 附件读取为 Blob URL，避免直接执行上传内容。
     fileUrl: () => null,
   };
 }

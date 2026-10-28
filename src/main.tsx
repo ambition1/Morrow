@@ -20,8 +20,7 @@ import { chineseSampleCommands } from './core/sample.zh-CN';
 import { sampleCommands } from './core/sample';
 import { startRecurring } from './app/recurring';
 import { WorkspaceSession } from './storage/session';
-import { webRequest, webVaultBridge } from './app/platform/webVault';
-import { WebLogin } from './app/components/WebLogin';
+import { webVaultBridge } from './app/platform/webVault';
 import { applyFonts } from './app/platform/fonts';
 import { localizeError } from './app/i18n/errors';
 import { t, tp } from './app/i18n';
@@ -40,7 +39,6 @@ import { setSession } from './app/workspace';
 
 type BootState =
   | { kind: 'loading' }
-  | { kind: 'login' }
   | { kind: 'error'; message: string }
   | { kind: 'choose'; legacy: number }
   | { kind: 'ready' };
@@ -58,26 +56,14 @@ if (desktop) document.documentElement.dataset.desktop = desktop.platform;
 
 async function openWorkspace(): Promise<BootState> {
   // morrow is a desktop app, pages are files in a folder the person chooses
-  // 浏览器必须先通过服务器认证，账号由会话确定。
-  // 当前账号用于将所有文件请求绑定到本标签页打开的工作区。
-  let username = '';
-  if (!desktop) {
-    try {
-      const response = await webRequest('/api/session');
-      username = ((await response.json()) as { username: string }).username;
-      sessionStorage.setItem('morrow.webUser', username);
-    } catch (error) {
-      if ((error as { status?: number }).status === 401) return { kind: 'login' };
-      throw error;
-    }
-  }
+  // 浏览器直接连接家庭共享笔记库，无需账号或会话。
   const vault = desktop?.vault ? await desktop.vault.open() : null;
   if (desktop?.vault && (!vault?.ok || !vault.root))
     return { kind: 'choose', legacy: await legacyPageCount().catch(() => 0) };
   const repository =
     desktop?.vault && vault?.root
       ? new VaultRepository(desktopVaultBridge(desktop.vault, vault.root), newId)
-      : new VaultRepository(webVaultBridge(username), newId);
+      : new VaultRepository(webVaultBridge(), newId);
   const opened = await WorkspaceSession.open(repository);
   if (!opened.ok) return { kind: 'error', message: opened.error };
   const session = opened.value;
@@ -130,7 +116,6 @@ function Boot() {
     };
   }, []);
 
-  if (state.kind === 'login') return <WebLogin />;
   if (state.kind === 'ready') return <App />;
   if (state.kind === 'choose') return <VaultChooser legacy={state.legacy} />;
   return (
