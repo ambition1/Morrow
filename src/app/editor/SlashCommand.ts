@@ -4,6 +4,9 @@ import { PluginKey } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
 import {
   CalendarDays,
+  Images,
+  FileText,
+  Globe,
   Columns2,
   Columns3,
   ListTree,
@@ -36,6 +39,8 @@ import type { TranslationKey } from '../i18n';
 import { pickFiles } from '../platform/files';
 import { editMathNear } from './Extras';
 import { insertFiles } from './Media';
+import { insertGallery } from './Gallery';
+import { openBookmarkEditor, openPageCardPicker } from './ReferenceCards';
 import type { MenuItem } from './SuggestionMenu';
 import { renderSuggestion } from './SuggestionMenu';
 
@@ -199,6 +204,47 @@ export const BLOCK_ITEMS: BlockItem[] = [
       chain(e, r).run();
       void pickFiles('image/*', true).then((files) => insertFiles(e, files));
     },
+  },
+  {
+    id: 'gallery',
+    title: 'Gallery',
+    description: 'A collection of photos',
+    icon: Images,
+    keywords: 'gallery album photos images 图册 相册 图片组',
+    run: (editor, range) => {
+      chain(editor, range).run();
+      void pickFiles('image/*', true).then((files) => insertGallery(editor, files));
+    },
+  },
+  {
+    id: 'pageCard',
+    title: 'Reference card',
+    description: 'A card linked to a local note',
+    icon: FileText,
+    keywords: 'reference card local page note 引用卡片 笔记卡片',
+    run: (editor, range) => {
+      chain(editor, range).run();
+      openPageCardPicker(editor);
+    },
+  },
+  {
+    id: 'bookmark',
+    title: 'Website card',
+    description: 'A manually written link preview',
+    icon: Globe,
+    keywords: 'bookmark website link preview card 网页卡片 书签 链接摘要',
+    run: (editor, range) => {
+      chain(editor, range).run();
+      openBookmarkEditor(editor);
+    },
+  },
+  {
+    id: 'inlineCode',
+    title: 'Inline code',
+    description: 'Code inside a sentence',
+    icon: Code2,
+    keywords: 'inline code 行内代码',
+    run: (editor, range) => chain(editor, range).toggleCode().run(),
   },
   {
     id: 'file',
@@ -377,57 +423,98 @@ export function getLocalizedBlocks(): BlockItem[] {
   });
 }
 
-// the groups the menu shows before you type, in this order
-const SECTIONS: Array<[string, string[], TranslationKey]> = [
-  [
-    'basic',
-    [
-      'text',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'bullet',
-      'ordered',
-      'task',
-      'toggle',
-      'quote',
-      'callout',
-      'divider',
-      'code',
-    ],
-    'slash.sections.basic',
-  ],
-  ['media', ['image', 'file'], 'slash.sections.media'],
-  ['layout', ['columns2', 'columns3', 'table', 'toc'], 'slash.sections.layout'],
-  [
-    'pagesAndData',
-    ['link', 'embed', 'date', 'database', 'inlineDatabase', 'canvas', 'inlineCanvas'],
-    'slash.sections.pagesAndData',
-  ],
-  ['mathsAndDiagrams', ['math', 'inlineMath', 'diagram', 'highlight'], 'slash.sections.mathsAndDiagrams'],
+/** 最近执行的命令只保存在当前浏览器偏好中。 */
+const RECENT_BLOCKS_KEY = 'morrow.recentBlocks';
+/** 格式区按照七列、两行的视觉顺序排列。 */
+const FORMAT_IDS = [
+  'text',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'bullet',
+  'ordered',
+  'task',
+  'quote',
+  'link',
+  'inlineCode',
+  'divider',
 ];
+/** 内容区使用双列短标签，图册与普通图片分开。 */
+const CONTENT_IDS = ['image', 'gallery', 'table', 'file', 'callout', 'columns2', 'toggle', 'toc'];
 
-function grouped(): BlockItem[] {
-  const items = getLocalizedBlocks();
-  const placed = new Set<string>();
-  const out: BlockItem[] = [];
-  for (const [, ids, sectionKey] of SECTIONS) {
-    const sectionName = t(sectionKey);
-    for (const id of ids) {
-      const item = items.find((candidate) => candidate.id === id);
-      if (item) {
-        out.push({ ...item, section: sectionName });
-        placed.add(id);
-      }
-    }
+/** 读取最多四个最近命令，损坏的偏好不影响打开菜单。 */
+export function recentBlockIds(): string[] {
+  try {
+    // 本地存储只接收字符串数组，并在重开时去重。
+    const saved: unknown = JSON.parse(localStorage.getItem(RECENT_BLOCKS_KEY) ?? '[]');
+    return Array.isArray(saved)
+      ? [...new Set(saved.filter((id): id is string => typeof id === 'string'))].slice(0, 4)
+      : [];
+  } catch {
+    return [];
   }
-  // anything not given a group still shows, at the end
-  const moreName = t('slash.sections.more');
-  for (const item of items) if (!placed.has(item.id)) out.push({ ...item, section: moreName });
-  return out;
+}
+
+/** 用户执行命令后才更新最近使用，不因悬停或搜索而变化。 */
+export function rememberBlock(id: string): void {
+  try {
+    localStorage.setItem(
+      RECENT_BLOCKS_KEY,
+      JSON.stringify([id, ...recentBlockIds().filter((saved) => saved !== id)].slice(0, 4)),
+    );
+  } catch {
+    /* 私密浏览或存储已满时保持菜单可用。 */
+  }
+}
+
+/** 空查询的紧凑分组；返回扁平顺序供键盘与鼠标共同使用。 */
+function grouped(): BlockItem[] {
+  // 本地化文案与命令定义仍来自唯一列表。
+  const items = getLocalizedBlocks();
+  // 已放入格式区和内容区的命令不会在更多区重复。
+  const placed = new Set([...FORMAT_IDS, ...CONTENT_IDS]);
+  // 最近使用允许与其所属分组同时展示，但采用独立选项ID。
+  const recent = recentBlockIds().flatMap((id) => {
+    const item = items.find((candidate) => candidate.id === id);
+    return item
+      ? [
+          {
+            ...item,
+            id: `recent:${id}`,
+            commandId: id,
+            compact: 'recent' as const,
+            section: t('editor.insertion.recent'),
+          },
+        ]
+      : [];
+  });
+  // 图标格式按钮的字符本身包含标题级别，不另外占文字行。
+  const format = FORMAT_IDS.flatMap((id) => {
+    const item = items.find((candidate) => candidate.id === id);
+    return item
+      ? [
+          {
+            ...item,
+            compact: 'format' as const,
+            glyph: id === 'text' ? 'T' : /^h[1-6]$/.test(id) ? id.toUpperCase() : undefined,
+            section: t('editor.insertion.format'),
+          },
+        ]
+      : [];
+  });
+  // 一般内容在图标区之后以双列排列。
+  const content = CONTENT_IDS.flatMap((id) => {
+    const item = items.find((candidate) => candidate.id === id);
+    return item ? [{ ...item, compact: 'content' as const, section: t('editor.insertion.content') }] : [];
+  });
+  // 已有其他能力全部保留，没有为了压缩面板而删掉命令。
+  const more = items
+    .filter((item) => !placed.has(item.id))
+    .map((item) => ({ ...item, compact: 'more' as const, section: t('editor.insertion.more') }));
+  return [...recent, ...format, ...content, ...more];
 }
 
 // blocks whose name matches come before blocks that only match a keyword, so /diagram finds the diagram
@@ -472,13 +559,16 @@ export const SlashCommand = Extension.create<SlashOptions>({
         items: ({ query }) =>
           query.length > 40 || /\s{2}/.test(query) ? [] : filterBlocks(query).slice(0, 40),
         command: ({ editor, range, props }) => {
-          const item = BLOCK_ITEMS.find((candidate) => candidate.id === props.id);
-          item?.run(editor, range, options);
+          const item = BLOCK_ITEMS.find((candidate) => candidate.id === (props.commandId ?? props.id));
+          if (!item || !editor.isEditable) return;
+          item.run(editor, range, options);
+          rememberBlock(item.id);
         },
         render: renderSuggestion(
           () => t('slash.menu.insertBlock'),
           () => t('slash.menu.noMatchingBlocks'),
           'insert',
+          { mode: 'slash' },
         ),
       }),
     ];

@@ -20,9 +20,9 @@ import { CALLOUT_TONES, calloutTone, COLORS } from '../../core/model';
 import type { CalloutTone, ColorName } from '../../core/model';
 import { tagColor } from '../../core/tags';
 import { emojiElement } from '../components/Emoji';
+import { applyBlockAppearance, openBlockAppearance } from './BlockAppearance';
 import { openDialog } from '../ui';
 import { t } from '../i18n';
-import type { TranslationKey } from '../i18n';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -500,13 +500,6 @@ export const CodeBlock = CodeBlockLowlight.extend({
   HTMLAttributes: { spellcheck: 'false' },
 });
 
-const TONE_LABELS: Record<CalloutTone, TranslationKey> = {
-  note: 'editor.note',
-  tip: 'editor.tip',
-  warning: 'editor.warning',
-  danger: 'editor.danger',
-};
-
 // the emoji each obsidian callout type is shown with
 const KIND_EMOJI: Record<string, string> = {
   note: '📝',
@@ -544,6 +537,42 @@ function calloutEmoji(kind: string, tone: CalloutTone): string {
   return own && calloutTone(kind) === tone ? own : KIND_EMOJI[tone]!;
 }
 
+/** 创建提示块的可选线性图标，所有路径均为本地常量。 */
+function calloutLineIcon(name: string): SVGSVGElement {
+  /** 图标SVG容器。 */
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '20');
+  svg.setAttribute('height', '20');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  /** 对应已支持图标的安全路径。 */
+  const paths: Record<string, string> = {
+    info: 'M12 11v6M12 7h.01',
+    lightbulb: 'M9 18h6M10 21h4M9 15c0-2-3-3-3-7a6 6 0 0 1 12 0c0 4-3 5-3 7',
+    check: 'm7 12 3 3 7-7',
+    alert: 'M12 7v6M12 17h.01',
+    help: 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4M12 18h.01',
+  };
+  if (name !== 'lightbulb') {
+    /** 圆形轮廓与项目线性图标体系保持一致。 */
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '12');
+    circle.setAttribute('cy', '12');
+    circle.setAttribute('r', '9');
+    svg.append(circle);
+  }
+  /** 图标的内部线条。 */
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', paths[name] ?? paths.info!);
+  svg.append(path);
+  return svg;
+}
+
 // callouts keep their obsidian type, an optional title and whether they start folded. the icon sits beside
 // the text like notion's and changes the colour when clicked, the title row only shows when there is one
 export function calloutNodeView(): NodeViewRenderer {
@@ -577,8 +606,16 @@ export function calloutNodeView(): NodeViewRenderer {
         ? (current.attrs.tone as CalloutTone)
         : 'note';
       dom.dataset.tone = tone;
-      icon.replaceChildren(emojiElement(calloutEmoji(String(current.attrs.kind ?? tone), tone)));
-      icon.title = t('editor.clickToChange', { tone: t(TONE_LABELS[tone]) });
+      applyBlockAppearance(dom, current.attrs);
+      // 自定义图标不改变提示语义，旧图标继续保留原有表现。
+      icon.hidden = current.attrs.icon === 'none';
+      dom.classList.toggle('has-no-icon', icon.hidden);
+      icon.replaceChildren(
+        current.attrs.icon && current.attrs.icon !== 'none'
+          ? calloutLineIcon(String(current.attrs.icon))
+          : emojiElement(calloutEmoji(String(current.attrs.kind ?? tone), tone)),
+      );
+      icon.title = t('editorBlocks.appearance');
       icon.setAttribute('aria-label', icon.title);
       const text = String(current.attrs.title ?? '');
       if (document.activeElement !== title) title.value = text;
@@ -589,16 +626,17 @@ export function calloutNodeView(): NodeViewRenderer {
       fold.setAttribute('aria-label', folded ? t('common.expand') : t('common.collapse'));
       fold.setAttribute('aria-expanded', String(!folded));
       // an empty title, rather than none, is one being added: its row shows until it is left empty
-      header.hidden = current.attrs.title == null && !current.attrs.fold;
+      // 折叠按钮独立可用，隐藏标题不会删除已保存标题。
+      title.hidden =
+        current.attrs.showTitle === false || (current.attrs.showTitle == null && current.attrs.title == null);
+      header.hidden = title.hidden && !current.attrs.fold;
     };
     sync();
     icon.addEventListener('click', () => {
       if (!editor.isEditable) return;
-      const tones = CALLOUT_TONES;
-      const next = tones[(tones.indexOf(current.attrs.tone as CalloutTone) + 1) % tones.length]!;
-      const kind = String(current.attrs.kind ?? '');
-      // a custom obsidian type keeps its name while it already looks right
-      setAttrs(editor.view, getPos, { tone: next, kind: kind && calloutTone(kind) === next ? kind : next });
+      // 图标与块菜单共用同一个外观设置入口。
+      const position = getPos();
+      if (position !== undefined) openBlockAppearance(editor, position, icon);
     });
     title.addEventListener('change', () =>
       setAttrs(editor.view, getPos, { title: title.value.trim() || null }),
@@ -607,6 +645,8 @@ export function calloutNodeView(): NodeViewRenderer {
       if (!title.value.trim() && current.attrs.title === '') setAttrs(editor.view, getPos, { title: null });
     });
     title.addEventListener('keydown', (event) => {
+      if (event.isComposing) return;
+      if (event.key === 'Escape') title.value = String(current.attrs.title ?? '');
       if (event.key === 'Enter' || event.key === 'Escape') {
         event.preventDefault();
         title.blur();
@@ -628,6 +668,7 @@ export function calloutNodeView(): NodeViewRenderer {
       stopEvent: (event) =>
         header.contains(event.target as globalThis.Node) || icon.contains(event.target as globalThis.Node),
       ignoreMutation: (mutation) =>
+        (mutation.type === 'attributes' && mutation.target === dom) ||
         header.contains(mutation.target as globalThis.Node) ||
         icon.contains(mutation.target as globalThis.Node),
     };

@@ -999,7 +999,11 @@ function linksTo(doc: DocNode, ids: Set<PageId>): boolean {
 function hasFileRefs(doc: DocNode): boolean {
   let found = false;
   walk(doc, (node) => {
-    if ((node.type === 'image' && typeof node.attrs?.fileId === 'string') || node.type === 'fileAttachment')
+    if (
+      (node.type === 'image' && typeof node.attrs?.fileId === 'string') ||
+      node.type === 'fileAttachment' ||
+      (node.type === 'bookmark' && typeof node.attrs?.coverFileId === 'string')
+    )
       found = true;
     return !found;
   });

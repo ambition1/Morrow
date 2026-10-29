@@ -10,12 +10,14 @@ import { BlockHandle } from './BlockHandle';
 import { Callout, FindReplace } from './Blocks';
 import { CodeBlock, Highlight, mathExtensions, MathViewTracker, RawBlock, Tags, TextColor } from './Extras';
 import { FileAttachment, FileDrop, Image } from './Media';
+import { Gallery } from './Gallery';
+import { Bookmark, PageCard, ReferenceCardPaste } from './ReferenceCards';
 import type { BlockMenuRequest } from './BlockHandle';
 import { MarkdownPaste } from './MarkdownPaste';
 import { PageLink } from './PageLink';
 import type { PageLinkOptions } from './PageLink';
 import { SlashCommand } from './SlashCommand';
-import { Column, Columns, DateMention, TableOfContents } from './Structure';
+import { Column, Columns, ContentAppearance, DateMention, TableOfContents } from './Structure';
 
 export interface ExtensionOptions extends PageLinkOptions {
   onBlockMenu: (request: BlockMenuRequest) => void;
@@ -98,6 +100,11 @@ export function createExtensions(options: ExtensionOptions): AnyExtension[] {
       ...(options.mountEmbed ? { mountEmbed: options.mountEmbed } : {}),
     }),
     SlashCommand.configure({ createChild: options.createChild }),
+    Gallery,
+    PageCard.configure(options),
+    Bookmark,
+    ReferenceCardPaste,
+    ContentAppearance,
     Image,
     FileAttachment,
     FileDrop,

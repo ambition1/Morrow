@@ -1,3 +1,4 @@
+import { metadataMarker, restoreBlockMetadata } from '../blockMetadata';
 import MarkdownIt from 'markdown-it';
 import type { StateBlock, StateInline, Token } from 'markdown-it';
 import { BACKGROUND_HEX, calloutTone, emptyDoc, nearestColor, TEXT_HEX } from '../model';
@@ -269,7 +270,7 @@ export function markdownToDoc(source: string, options: ParseOptions = {}): DocNo
     }
   }
 
-  const doc = normalize(root);
+  const doc = restoreBlockMetadata(normalize(root), options.resolveFile);
   return (doc.content ?? []).length > 0 ? doc : emptyDoc();
 }
 
@@ -286,6 +287,12 @@ const NOTION_ICON = /^<img\s[^>]*src=["'](?:notion:\/\/custom_emoji\/|\/icons\/)
 // toggles and notion asides become blocks, any other html is kept exactly as written
 function htmlBlock(source: string, options: ParseOptions, b: Builder): void {
   const html = source.trim();
+  /** 扩展块标记只在明确的受限格式下参与恢复，其余HTML继续原样保留。 */
+  const metadata = metadataMarker(html);
+  if (metadata) {
+    b.push(metadata);
+    return;
+  }
   if (NOTION_ICON.test(html) && !html.replace(NOTION_ICON, '').trim()) return;
   // an empty line kept on purpose, the way morrow writes one
   if (/^<br\s*\/?>$/i.test(html)) {

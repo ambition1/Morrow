@@ -179,6 +179,10 @@ export const KNOWN_NODE_TYPES = new Set([
   'pageLink',
   'image',
   'fileAttachment',
+  // 扩展块继续使用普通图片和页面链接作为子内容。
+  'gallery',
+  'pageCard',
+  'bookmark',
   'callout',
   'details',
   'detailsSummary',

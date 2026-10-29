@@ -83,6 +83,13 @@ export function docToPlainText(doc: DocNode): string {
       return;
     }
     if (node.type === 'image' && node.attrs?.alt) lines.push(String(node.attrs.alt));
+    // 图注与手动书签文本也参与全文检索。
+    if (['image', 'gallery'].includes(node.type) && node.attrs?.caption)
+      lines.push(String(node.attrs.caption));
+    if (node.type === 'bookmark')
+      for (const key of ['title', 'description', 'href']) {
+        if (typeof node.attrs?.[key] === 'string') lines.push(String(node.attrs[key]));
+      }
     if (node.type === 'rawBlock' && node.attrs?.text) lines.push(String(node.attrs.text));
     if (node.type === 'blockMath' && node.attrs?.latex) lines.push(String(node.attrs.latex));
     // canvases are searched by the words on their cards
@@ -122,6 +129,10 @@ export function fileIdsInDoc(doc: DocNode): string[] {
     if ((node.type === 'image' || node.type === 'fileAttachment') && typeof node.attrs?.fileId === 'string') {
       ids.add(node.attrs.fileId);
     }
+    // 网页卡片封面同样受附件引用保护。
+    if (node.type === 'bookmark' && typeof node.attrs?.coverFileId === 'string') {
+      ids.add(node.attrs.coverFileId);
+    }
   });
   return [...ids];
 }
@@ -134,6 +145,11 @@ export function remapFileIds(doc: DocNode, ids: ReadonlyMap<string, string>): Do
     if ((node.type === 'image' || node.type === 'fileAttachment') && typeof node.attrs?.fileId === 'string') {
       const id = ids.get(node.attrs.fileId);
       if (id) next = { ...node, attrs: { ...node.attrs, fileId: id } };
+    }
+    // 导入备份时更新本地封面引用，不能留下旧库ID。
+    if (node.type === 'bookmark' && typeof node.attrs?.coverFileId === 'string') {
+      const cover = ids.get(node.attrs.coverFileId);
+      if (cover) next = { ...next, attrs: { ...next.attrs, coverFileId: cover } };
     }
     return next.content ? { ...next, content: next.content.map(visit) } : next;
   };

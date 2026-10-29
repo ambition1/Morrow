@@ -1,3 +1,5 @@
+import { withBlockMetadata } from '../blockMetadata';
+import { normalizeBookmarkHref } from '../blockAppearance';
 import { BACKGROUND_HEX, TEXT_HEX } from '../model';
 import type { ColorName, DocMark, DocNode, PageId } from '../model';
 
@@ -63,7 +65,14 @@ function blocks(nodes: DocNode[], options: SerializeOptions): string {
   return parts.join('\n\n');
 }
 
+/** 在可读正文外附加可选块属性，旧文档不会新增标记。 */
 function block(node: DocNode, options: SerializeOptions): string | null {
+  /** 先生成所有阅读器都能展示的Markdown正文。 */
+  const readable = baseBlock(node, options);
+  return readable === null ? null : withBlockMetadata(node, readable, options.filePath);
+}
+
+function baseBlock(node: DocNode, options: SerializeOptions): string | null {
   switch (node.type) {
     case 'paragraph': {
       const text = escapeLineStart(inline(node.content ?? [], options));
@@ -103,7 +112,12 @@ function block(node: DocNode, options: SerializeOptions): string | null {
       const target =
         typeof node.attrs?.fileId === 'string' ? options.filePath?.(node.attrs.fileId) : undefined;
       const src = target ?? (typeof node.attrs?.src === 'string' ? node.attrs.src : null);
-      return src ? `![${alt}](${formatHref(src)})` : `*[image${alt ? `: ${alt}` : ''}]*`;
+      /** 图注同时作为可读正文输出，其他Markdown工具也能读取。 */
+      const caption =
+        typeof node.attrs?.caption === 'string' && node.attrs.caption
+          ? `\n\n*${escapeText(node.attrs.caption)}*`
+          : '';
+      return (src ? `![${alt}](${formatHref(src)})` : `*[image${alt ? `: ${alt}` : ''}]*`) + caption;
     }
     case 'fileAttachment': {
       const name = escapeText(String(node.attrs?.name ?? 'file'));
@@ -124,10 +138,33 @@ function block(node: DocNode, options: SerializeOptions): string | null {
       return '<!-- toc -->';
     case 'columns': {
       // plain html wrappers, other markdown apps show the columns one after another
-      const columns = (node.content ?? []).map(
-        (column) => `<div data-column>\n\n${blocks(column.content ?? [], options)}\n\n</div>`,
+      const columns = (node.content ?? []).map((column) => block(column, options) ?? '');
+      // 带外观标记的栏与HTML容器之间留空行，避免被当作一个原始HTML块。
+      const separator = columns.some((column) => column.startsWith('<!-- morrow:block')) ? '\n\n' : '\n';
+      return `<div data-columns>${separator}${columns.join(separator)}${separator}</div>`;
+    }
+    case 'column':
+      return `<div data-column>\n\n${blocks(node.content ?? [], options)}\n\n</div>`;
+    case 'gallery':
+      return (
+        blocks(node.content ?? [], options) +
+        (node.attrs?.caption ? `\n\n*${escapeText(String(node.attrs.caption))}*` : '')
       );
-      return `<div data-columns>\n${columns.join('\n')}\n</div>`;
+    case 'pageCard':
+      return inline(node.content ?? [], options);
+    case 'bookmark': {
+      /** 书签仅输出合法网页链接，不执行任意协议。 */
+      const href = normalizeBookmarkHref(node.attrs?.href);
+      /** 标题和摘要在应用外也保持可读。 */
+      const label = escapeText(String(node.attrs?.title || href || 'Link'));
+      /** 本地封面导出为普通图片，不引用远程图片。 */
+      const cover =
+        typeof node.attrs?.coverFileId === 'string' ? options.filePath?.(node.attrs.coverFileId) : null;
+      return (
+        (cover ? `![${label}](${formatHref(cover)})\n\n` : '') +
+        (href ? `[${label}](${formatHref(href)})` : label) +
+        (node.attrs?.description ? ` — ${escapeText(String(node.attrs.description))}` : '')
+      );
     }
     case 'details': {
       const [summary, content] = node.content ?? [];

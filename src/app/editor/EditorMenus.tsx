@@ -48,6 +48,8 @@ import { copyImageFile, downloadFile } from '../platform/attachments';
 import { copyText, desktop, openExternal } from '../platform/desktop';
 import { openPage } from '../router';
 import { moveBlock } from './BlockHandle';
+import { BlockAppearanceSettings } from './BlockAppearanceSettings';
+import { setReferenceDisplay } from './ReferenceCards';
 import type { BlockMenuRequest } from './BlockHandle';
 import { toast } from '../ui';
 import { colorLabel } from '../i18n/labels';
@@ -514,6 +516,8 @@ export function BlockMenu({
   pageTitle: string;
   onClose: () => void;
 }) {
+  // 外观设置保留原上下文菜单作为更多操作，避免删除和复制功能退化。
+  const [showAppearance, setShowAppearance] = useState(true);
   const turn = (apply: () => void) => () => {
     editor
       .chain()
@@ -616,7 +620,27 @@ export function BlockMenu({
       },
     },
   ];
-  const blockType = editor.state.doc.nodeAt(request.pos)?.type.name;
+  // 独立引用段落可直接转为卡片，混合正文中的引用保留原排版。
+  const currentBlock = editor.state.doc.nodeAt(request.pos);
+  // 行内引用位置位于段落起点之后，卡片则直接使用块位置。
+  const referencePosition =
+    currentBlock?.type.name === 'pageCard'
+      ? request.pos
+      : currentBlock?.type.name === 'paragraph' &&
+          currentBlock.childCount === 1 &&
+          currentBlock.firstChild?.type.name === 'pageLink'
+        ? request.pos + 1
+        : null;
+  if (referencePosition !== null)
+    entries.unshift(
+      {
+        label: t('editor.cards.convertCard'),
+        icon: Link2,
+        onSelect: () => setReferenceDisplay(editor, referencePosition, 'card'),
+      },
+      { separator: true },
+    );
+  const blockType = currentBlock?.type.name;
   const fileId = editor.state.doc.nodeAt(request.pos)?.attrs.fileId as string | null | undefined;
   const vault = desktop?.vault;
   if (blockType === 'image' && fileId) {
@@ -693,6 +717,16 @@ export function BlockMenu({
   const shown = textual
     ? entries
     : entries.filter((_entry, index) => index < firstTurnInto || index > afterTurnInto);
+  if (showAppearance && ['callout', 'columns', 'column', 'details', 'orderedList'].includes(blockType ?? ''))
+    return (
+      <BlockAppearanceSettings
+        editor={editor}
+        pos={request.pos}
+        anchor={request.rect}
+        onClose={onClose}
+        onMore={() => setShowAppearance(false)}
+      />
+    );
   return (
     <Menu
       anchor={request.rect}

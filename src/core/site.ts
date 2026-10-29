@@ -1,3 +1,10 @@
+import {
+  normalizeBackground,
+  normalizeBorder,
+  normalizeBookmarkHref,
+  normalizeWidths,
+} from './blockAppearance';
+import { BACKGROUND_HEX } from './model';
 // turns pages into a small static website: plain html files, one stylesheet, no scripts and nothing loaded from elsewhere
 import { canvasFromDoc } from './canvas';
 import { formatValue, rowsOf, valueOf } from './database';
@@ -249,6 +256,39 @@ function inline(nodes: DocNode[] = [], context: RenderContext): string {
     .join('');
 }
 
+/** 将受限外观转换成静态站点样式，用户值不能注入任意CSS。 */
+function appearanceHtml(attrs: Record<string, unknown> = {}): string {
+  /** 颜色与边框都通过有限校验。 */
+  const background = normalizeBackground(attrs.background);
+  /** 主题色在独立HTML中有稳定的浅色后备值。 */
+  const color =
+    background && background !== 'transparent' && !background.startsWith('#')
+      ? BACKGROUND_HEX[background as keyof typeof BACKGROUND_HEX]
+      : background;
+  /** 当前节点的边框样式。 */
+  const border = normalizeBorder(attrs.border);
+  /** 拼接内容只来自已校验的色值和固定CSS。 */
+  const styles: string[] = [];
+  if (color) {
+    styles.push(`background:${color}`);
+    if (color.startsWith('#')) {
+      /** 根据相对亮度挑选对比度更高的黑白文字。 */
+      const channels = [1, 3, 5].map((index) => parseInt(color.slice(index, index + 2), 16) / 255);
+      /** sRGB转换后计算WCAG相对亮度。 */
+      const linear = channels.map((channel) =>
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+      );
+      /** 加权亮度决定黑白文字的对比度。 */
+      const luminance = linear[0]! * 0.2126 + linear[1]! * 0.7152 + linear[2]! * 0.0722;
+      styles.push(`color:${(luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? '#1f2328' : '#ffffff'}`);
+    }
+  }
+  if (border === 'none') styles.push('border:0');
+  if (border === 'thin') styles.push('border:1px solid currentColor');
+  if (border === 'left') styles.push('border:0;border-left:3px solid currentColor');
+  return styles.length ? ` style="${styles.join(';')}"` : '';
+}
+
 export function docToHtml(doc: DocNode, context: RenderContext): string {
   const block = (node: DocNode): string => {
     const children = () => (node.content ?? []).map(block).join('\n');
@@ -262,7 +302,7 @@ export function docToHtml(doc: DocNode, context: RenderContext): string {
       case 'bulletList':
         return `<ul>${children()}</ul>`;
       case 'orderedList':
-        return `<ol start="${Number(node.attrs?.start ?? 1) || 1}">${children()}</ol>`;
+        return `<ol${node.attrs?.presentation === 'steps' ? ' class="steps"' : ''} start="${Number(node.attrs?.start ?? 1) || 1}">${children()}</ol>`;
       case 'listItem':
         return `<li>${children()}</li>`;
       case 'taskList':
@@ -273,15 +313,30 @@ export function docToHtml(doc: DocNode, context: RenderContext): string {
         return `<blockquote>${children()}</blockquote>`;
       case 'callout': {
         const title =
-          typeof node.attrs?.title === 'string' && node.attrs.title
+          typeof node.attrs?.title === 'string' && node.attrs.title && node.attrs.showTitle !== false
             ? `<p class="callout-title">${escape(node.attrs.title)}</p>`
             : '';
-        return `<aside class="callout tone-${escape(String(node.attrs?.tone ?? 'note'))}">${title}${children()}</aside>`;
+        /** 静态内容也保留可选图标与折叠，不需要脚本。 */
+        const icon =
+          node.attrs?.icon && node.attrs.icon !== 'none'
+            ? `<span aria-hidden="true">${escape(({ info: 'ⓘ', lightbulb: '◇', check: '✓', alert: '!', help: '?' } as Record<string, string>)[String(node.attrs.icon)] ?? String(node.attrs.icon))}</span> `
+            : '';
+        /** 只在明确允许折叠时使用原生details。 */
+        const body =
+          node.attrs?.fold === '+' || node.attrs?.fold === '-'
+            ? `<details${node.attrs.fold === '+' ? ' open' : ''}><summary>${icon}${title || 'Note'}</summary>${children()}</details>`
+            : `${icon}${title}${children()}`;
+        return `<aside class="callout tone-${escape(String(node.attrs?.tone ?? 'note'))}"${appearanceHtml(node.attrs)}>${body}</aside>`;
       }
-      case 'columns':
-        return `<div class="columns" style="--columns:${(node.content ?? []).length}">${children()}</div>`;
+      case 'columns': {
+        /** 分栏比例只接受正数，不使用任意样式字符串。 */
+        const widths = normalizeWidths(node.attrs?.widths, node.content?.length);
+        /** 图文间距与编辑器相同，窄屏仍通过CSS纵向排列。 */
+        const gap = node.attrs?.gap === 'compact' ? 12 : node.attrs?.gap === 'wide' ? 28 : 20;
+        return `<div class="columns" style="--columns:${(node.content ?? []).length};gap:${gap}px${widths ? `;grid-template-columns:${widths.map((width) => `${width}fr`).join(' ')}` : ''}">${children()}</div>`;
+      }
       case 'column':
-        return `<div class="column">${children()}</div>`;
+        return `<div class="column"${appearanceHtml(node.attrs)}>${children()}</div>`;
       case 'tableOfContents': {
         const headings = (doc.content ?? []).filter((child) => child.type === 'heading');
         if (!headings.length) return '';
@@ -294,7 +349,7 @@ export function docToHtml(doc: DocNode, context: RenderContext): string {
       }
       case 'details': {
         const [summary, content] = node.content ?? [];
-        return `<details><summary>${inline(summary?.content, context)}</summary>${(content?.content ?? []).map(block).join('\n')}</details>`;
+        return `<details${node.attrs?.open ? ' open' : ''}${appearanceHtml(node.attrs)}><summary>${inline(summary?.content, context)}</summary>${(content?.content ?? []).map(block).join('\n')}</details>`;
       }
       case 'codeBlock': {
         const language =
@@ -317,10 +372,40 @@ export function docToHtml(doc: DocNode, context: RenderContext): string {
         return `<th>${(node.content ?? []).map((child) => inline(child.content, context)).join('<br>')}</th>`;
       case 'tableCell':
         return `<td>${(node.content ?? []).map((child) => inline(child.content, context)).join('<br>')}</td>`;
+      case 'gallery': {
+        /** 静态发布按有序网格展示所有图片，轮播不能隐藏其他图片。 */
+        const columns = node.attrs?.columns === 2 || node.attrs?.columns === 4 ? node.attrs.columns : 3;
+        return `<section class="published-gallery" style="--gallery-columns:${columns}">${children()}${node.attrs?.caption ? `<p class="gallery-caption">${escape(String(node.attrs.caption))}</p>` : ''}</section>`;
+      }
+      case 'pageCard':
+        return `<div class="reference-card">${inline(node.content, context)}</div>`;
+      case 'bookmark': {
+        /** 网页卡片没有自动抓取，也不会执行危险协议。 */
+        const href = normalizeBookmarkHref(node.attrs?.href);
+        /** 本地封面参与站点附件复制。 */
+        const cover =
+          typeof node.attrs?.coverFileId === 'string'
+            ? `<img src="${context.assetPath(node.attrs.coverFileId)}" alt="" loading="lazy">`
+            : '';
+        return `<aside class="reference-card">${cover}${href ? `<a href="${escape(href)}" rel="noopener noreferrer">${escape(String(node.attrs?.title || href))}</a>` : escape(String(node.attrs?.title ?? ''))}${node.attrs?.description ? `<p>${escape(String(node.attrs.description))}</p>` : ''}</aside>`;
+      }
       case 'image': {
         const alt = escape(String(node.attrs?.alt ?? ''));
-        if (typeof node.attrs?.fileId === 'string')
-          return `<figure><img src="${context.assetPath(node.attrs.fileId)}" alt="${alt}" loading="lazy"></figure>`;
+        if (typeof node.attrs?.fileId === 'string') {
+          /** 宽度与对齐仅使用有限数值和枚举，图注作为普通文字转义。 */
+          const width =
+            typeof node.attrs.width === 'number' && Number.isFinite(node.attrs.width)
+              ? Math.min(100, Math.max(10, node.attrs.width))
+              : 100;
+          /** 未配置的旧图片继续居中显示。 */
+          const alignment =
+            node.attrs.align === 'left'
+              ? '0 auto 0 0'
+              : node.attrs.align === 'right'
+                ? '0 0 0 auto'
+                : '0 auto';
+          return `<figure style="width:${width}%;margin:${alignment}"><img src="${context.assetPath(node.attrs.fileId)}" alt="${alt}" loading="lazy">${node.attrs.caption ? `<figcaption>${escape(String(node.attrs.caption))}</figcaption>` : ''}</figure>`;
+        }
         // a published page never loads anything from elsewhere, remote images become links
         const src = typeof node.attrs?.src === 'string' ? node.attrs.src : '';
         return SAFE_HREF.test(src)
@@ -393,7 +478,7 @@ main{max-width:760px;width:100%;margin:0 auto;padding:56px 32px}h1{font-size:2.2
 .page-link{text-decoration:none;background:var(--soft);border-radius:3px;padding:0 .2em}.page-link.missing{color:var(--muted);background:none}
 code,pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85em;background:var(--code);border-radius:5px}code{padding:.1em .3em}pre{padding:14px 16px;overflow:auto}pre code{padding:0;background:none}
 blockquote{margin:0;padding-left:16px;border-left:3px solid var(--line);color:var(--muted)}mark{background:rgba(214,160,40,.3);color:inherit}
-.callout{padding:10px 16px;margin:1em 0;border-left:3px solid #4f7aa8;background:rgba(79,122,168,.09);border-radius:6px}.tone-tip{border-color:#4d8a5c;background:rgba(77,138,92,.1)}.tone-warning{border-color:#b7791f;background:rgba(183,121,31,.11)}.tone-danger{border-color:#b3261e;background:rgba(179,38,30,.08)}.callout-title{font-weight:600;margin:0}
+.published-gallery{display:grid;grid-template-columns:repeat(var(--gallery-columns,3),minmax(0,1fr));gap:12px}.published-gallery figure{width:100%!important;margin:0!important}.published-gallery img{width:100%;border-radius:8px}.gallery-caption{grid-column:1/-1}.reference-card{border:1px solid var(--line);padding:14px;border-radius:10px;margin:16px 0}.reference-card img{max-height:160px;max-width:100%;object-fit:cover}.steps{list-style-type:decimal-leading-zero}figcaption{font:14px/1.5 system-ui,sans-serif;opacity:.7}.callout{padding:10px 16px;margin:1em 0;border-left:3px solid #4f7aa8;background:rgba(79,122,168,.09);border-radius:6px}.tone-tip{border-color:#4d8a5c;background:rgba(77,138,92,.1)}.tone-warning{border-color:#b7791f;background:rgba(183,121,31,.11)}.tone-danger{border-color:#b3261e;background:rgba(179,38,30,.08)}.callout-title{font-weight:600;margin:0}
 .table{overflow:auto}table{border-collapse:collapse;font:15px/1.5 system-ui,sans-serif}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left}th{color:var(--muted);font-weight:500}
 ul.tasks{list-style:none;padding-left:4px}img{max-width:100%;border-radius:6px}figure{margin:1em 0}.math-block{overflow:auto;text-align:center}
 .tags span{font:13px system-ui,sans-serif;color:var(--accent);background:var(--soft);padding:2px 8px;border-radius:99px}

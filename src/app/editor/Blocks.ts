@@ -4,6 +4,7 @@ import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { CALLOUT_TONES } from '../../core/model';
 import { calloutNodeView } from './Extras';
+import { blockAppearanceAttributes } from './BlockAppearance';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -21,6 +22,21 @@ export const Callout = Node.create({
 
   addAttributes() {
     return {
+      ...blockAppearanceAttributes(),
+      // 图标可独立选择，缺省保持旧提示块的语义图标。
+      icon: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-callout-icon'),
+        renderHTML: (attrs) => (attrs.icon ? { 'data-callout-icon': attrs.icon } : {}),
+      },
+      // 标题显示与标题文字分别保存，不因隐藏标题而丢失文字。
+      showTitle: {
+        default: null,
+        parseHTML: (element) =>
+          element.hasAttribute('data-show-title') ? element.getAttribute('data-show-title') === 'true' : null,
+        renderHTML: (attrs) =>
+          typeof attrs.showTitle === 'boolean' ? { 'data-show-title': String(attrs.showTitle) } : {},
+      },
       tone: {
         default: 'note',
         parseHTML: (element) => {

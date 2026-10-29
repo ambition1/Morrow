@@ -1,0 +1,270 @@
+/**
+ * 功能：统一提示块外观、结构化分栏、步骤列表及折叠块设置的视觉反馈。
+ * 作者：xuanli
+ * 创建时间：2026-10-30 00:09:58
+ */
+
+/* 外观颜色通过受限变量注入，正文保持实色与可读对比。 */
+.prose :is(.callout, .column, .toggle)[data-block-background] {
+  background: var(--block-background);
+  color: var(--block-text);
+}
+.prose :is(.callout, .column, .toggle)[data-block-border='none'] {
+  border: 1px solid transparent;
+}
+.prose :is(.callout, .column, .toggle)[data-block-border='thin'] {
+  border: 1px solid color-mix(in srgb, var(--block-line, var(--border-strong)) 32%, transparent);
+}
+.prose :is(.callout, .column, .toggle)[data-block-border='left'] {
+  border: 1px solid transparent;
+  border-left: 3px solid var(--block-line, var(--callout-line, var(--accent)));
+}
+.prose .callout[data-block-background] :is(.callout-title, .callout-icon, .callout-fold) {
+  color: inherit;
+}
+.prose .callout.has-no-icon {
+  grid-template-columns: minmax(0, 1fr);
+}
+.callout-icon[hidden],
+.callout-title[hidden] {
+  display: none;
+}
+.callout-title {
+  min-width: 0;
+}
+.callout-icon svg {
+  display: block;
+  flex: none;
+}
+.prose .column:is([data-block-background], [data-block-border]),
+.prose .toggle:is([data-block-background], [data-block-border]) {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+}
+
+/* 视图额外容器承载正文，各栏手柄始终位于内容之外。 */
+.prose .columns:has(> .columns-content) {
+  display: block;
+  position: relative;
+}
+.prose .columns-content,
+.prose .columns:not(:has(> .columns-content)) {
+  display: grid;
+  grid-template-columns: var(--column-template, repeat(var(--columns, 2), minmax(0, 1fr)));
+  gap: 24px;
+}
+.prose .columns[data-column-gap='compact'] > .columns-content,
+.prose .columns[data-column-gap='compact']:not(:has(> .columns-content)) {
+  gap: 12px;
+}
+.prose .columns[data-column-gap='wide'] > .columns-content,
+.prose .columns[data-column-gap='wide']:not(:has(> .columns-content)) {
+  gap: 36px;
+}
+.prose .columns-content > .column {
+  min-width: 0;
+}
+.prose .columns-content > .column > :first-child {
+  margin-top: 0;
+}
+.prose .columns-content > .column > :last-child {
+  margin-bottom: 0;
+}
+.ProseMirror[contenteditable='true'] .columns:hover .column {
+  outline-color: var(--border);
+}
+.ProseMirror[contenteditable='false'] .column-resizers {
+  display: none;
+}
+.column-resizers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.column-resizer {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 20px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
+  touch-action: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+.columns:hover .column-resizer,
+.column-resizer:focus-visible,
+.columns.is-resizing .column-resizer {
+  opacity: 1;
+}
+.column-resizer:hover,
+.column-resizer:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.columns.is-resizing {
+  user-select: none;
+}
+
+/* 步骤只改变现有有序列表的表现，不另存任务状态。 */
+.prose ol[data-presentation='steps'] {
+  list-style: none;
+  padding-left: 48px;
+  margin-left: 0;
+}
+.prose ol[data-presentation='steps'] > li {
+  position: relative;
+  margin: 16px 0;
+  min-height: 32px;
+}
+.prose ol[data-presentation='steps'] > li::marker {
+  content: '';
+}
+.prose ol[data-presentation='steps'] > li::before {
+  content: counter(list-item);
+  position: absolute;
+  left: -44px;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font: 600 var(--text-ui) var(--font-ui);
+}
+
+/* 外观面板沿用Popover、输入框、分段控件和开关。 */
+.block-appearance-popover {
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  font: var(--text-sm) var(--font-ui);
+}
+.block-appearance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.block-setting-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+.block-setting-label {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.block-appearance-popover .segmented {
+  display: flex;
+  width: 100%;
+}
+.block-appearance-popover .segmented button {
+  flex: 1;
+  white-space: nowrap;
+}
+.block-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.block-colors .color-dot {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+.block-transparent {
+  background: repeating-conic-gradient(var(--border) 0 25%, var(--surface) 0 50%) 50% / 8px 8px;
+}
+.block-custom-color {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+.block-custom-color input {
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+}
+.block-icon-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.block-icon-options .icon-button {
+  border: 1px solid var(--border);
+  width: 34px;
+  height: 34px;
+}
+.block-icon-options .icon-button:is(.is-active, [aria-pressed='true']) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.block-setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.block-setting-help {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+.block-column-setting {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.block-column-setting select {
+  width: 100%;
+  min-width: 0;
+}
+.block-more {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* 移动端与窄分栏保持文档顺序，禁止拖动压窄阅读区域。 */
+@media (max-width: 720px) {
+  .prose .columns-content,
+  .prose .columns:not(:has(> .columns-content)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .column-resizers {
+    display: none;
+  }
+  .block-appearance-popover input {
+    font-size: 16px;
+  }
+}
+.pane[data-size='narrow'] .columns-content,
+.pane[data-size='narrow'] .columns:not(:has(> .columns-content)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.pane[data-size='narrow'] .column-resizers {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .column-resizer {
+    transition: none;
+  }
+}
+@media (hover: none) {
+  .column-resizer {
+    opacity: 1;
+  }
+}

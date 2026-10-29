@@ -1,4 +1,8 @@
-import { mergeAttributes, Node } from '@tiptap/core';
+import { Extension, mergeAttributes, Node } from '@tiptap/core';
+import type { NodeViewRenderer } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
+import { normalizeWidths } from '../../core/blockAppearance';
+import { applyBlockAppearance, blockAppearanceAttributes } from './BlockAppearance';
 import type { Editor } from '@tiptap/core';
 import { PluginKey, TextSelection } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
@@ -24,6 +28,35 @@ export const Columns = Node.create({
   defining: true,
   isolating: true,
 
+  // 宽度和间距为可选属性，旧文档仍默认等分。
+  addAttributes() {
+    return {
+      widths: {
+        default: null,
+        parseHTML: (element) => {
+          try {
+            return normalizeWidths(JSON.parse(element.getAttribute('data-column-widths') ?? 'null'));
+          } catch {
+            return null;
+          }
+        },
+        renderHTML: (attrs) => (attrs.widths ? { 'data-column-widths': JSON.stringify(attrs.widths) } : {}),
+      },
+      gap: {
+        default: null,
+        parseHTML: (element) =>
+          ['compact', 'wide'].includes(element.getAttribute('data-column-gap') ?? '')
+            ? element.getAttribute('data-column-gap')
+            : null,
+        renderHTML: (attrs) => (attrs.gap ? { 'data-column-gap': attrs.gap } : {}),
+      },
+    };
+  },
+
+  addNodeView() {
+    return columnsNodeView();
+  },
+
   parseHTML() {
     return [{ tag: 'div[data-columns]' }];
   },
@@ -34,7 +67,7 @@ export const Columns = Node.create({
       mergeAttributes(HTMLAttributes, {
         'data-columns': '',
         class: 'columns',
-        style: `--columns: ${node.childCount}`,
+        style: `--columns: ${node.childCount};--column-template:${(normalizeWidths(node.attrs.widths, node.childCount) ?? Array.from({ length: node.childCount }, () => 1)).map((width) => `minmax(0,${width}fr)`).join(' ')}`,
       }),
       0,
     ];
@@ -81,6 +114,11 @@ export const Column = Node.create({
   content: 'block+',
   isolating: true,
 
+  // 栏背景与边框复用提示块的受限外观属性。
+  addAttributes() {
+    return blockAppearanceAttributes();
+  },
+
   parseHTML() {
     return [{ tag: 'div[data-column]' }];
   },
@@ -89,6 +127,246 @@ export const Column = Node.create({
     return ['div', mergeAttributes(HTMLAttributes, { 'data-column': '', class: 'column' }), 0];
   },
 });
+
+/** 为现有步骤列表和折叠块增加可选属性，不替换原有节点类型。 */
+export const ContentAppearance = Extension.create({
+  name: 'contentAppearance',
+  addGlobalAttributes() {
+    return [
+      { types: ['details'], attributes: blockAppearanceAttributes() },
+      {
+        types: ['orderedList'],
+        attributes: {
+          presentation: {
+            default: null,
+            parseHTML: (element) => (element.getAttribute('data-presentation') === 'steps' ? 'steps' : null),
+            renderHTML: (attrs) => (attrs.presentation === 'steps' ? { 'data-presentation': 'steps' } : {}),
+          },
+        },
+      },
+    ];
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        view: (view) => {
+          /** 第三方折叠NodeView仅刷新展开状态，因此单独同步其外观。 */
+          const sync = () =>
+            view.state.doc.descendants((node, pos) => {
+              if (node.type.name === 'details') {
+                /** 折叠节点实际的外层DOM。 */
+                const element = view.nodeDOM(pos);
+                if (element instanceof HTMLElement) applyBlockAppearance(element, node.attrs);
+              }
+            });
+          sync();
+          return {
+            update: (next, previous) => {
+              if (next.state.doc !== previous.doc) sync();
+            },
+          };
+        },
+      }),
+    ];
+  },
+});
+
+/** 分栏视图在本地预览拖动，仅结束拖动时提交一个可撤销事务。 */
+function columnsNodeView(): NodeViewRenderer {
+  return ({ node, editor, getPos }) => {
+    /** 当前分栏节点。 */
+    let current = node;
+    /** 分栏外壳，工具手柄不进入正文内容。 */
+    const dom = document.createElement('div');
+    dom.className = 'columns';
+    dom.dataset.columns = '';
+    /** 仅供ProseMirror管理各栏内容的容器。 */
+    const content = document.createElement('div');
+    content.className = 'columns-content';
+    /** 浮在分栏间隙中的可访问分隔手柄。 */
+    const controls = document.createElement('div');
+    controls.className = 'column-resizers';
+    controls.contentEditable = 'false';
+    dom.append(content, controls);
+    /** 正在拖动时的临时清理方法。 */
+    let cancelDrag: (() => void) | null = null;
+    /** 当前布局的规范化宽度。 */
+    const widths = () =>
+      normalizeWidths(current.attrs.widths, current.childCount) ??
+      Array.from({ length: current.childCount }, () => 100 / current.childCount);
+    /** 只更新CSS预览，不写入持久化数据。 */
+    const preview = (values: number[]) =>
+      content.style.setProperty('--column-template', values.map((value) => `minmax(0,${value}fr)`).join(' '));
+    /** 将分隔手柄放在实际两栏之间，包含当前间距。 */
+    const place = () => {
+      /** 实际显示的各栏。 */
+      const columns = Array.from(content.children).filter(
+        (element): element is HTMLElement => element instanceof HTMLElement,
+      );
+      /** 内容容器的起点。 */
+      const box = content.getBoundingClientRect();
+      Array.from(controls.children).forEach((element, index) => {
+        /** 当前栏和下一栏之间的真实横向中心。 */
+        const left = columns[index]?.getBoundingClientRect();
+        /** 下一栏的起点。 */
+        const right = columns[index + 1]?.getBoundingClientRect();
+        if (element instanceof HTMLElement && left && right)
+          element.style.left = `${(left.right + right.left) / 2 - box.left}px`;
+      });
+    };
+    /** 提交分栏宽度，保留栏内容与其他布局设置。 */
+    const commit = (values: number[]) => {
+      if (editor.isDestroyed || !editor.isEditable) return;
+      /** 当前节点文档位置。 */
+      const pos = getPos();
+      if (pos === undefined) return;
+      /** 当前文档节点。 */
+      const latest = editor.state.doc.nodeAt(pos);
+      if (latest?.type.name !== 'columns') return;
+      editor.view.dispatch(
+        editor.state.tr.setNodeMarkup(pos, undefined, { ...latest.attrs, widths: values }),
+      );
+    };
+    /** 根据当前栏数重新建立拖动与键盘分隔手柄。 */
+    const rebuild = () => {
+      controls.replaceChildren();
+      if (!editor.isEditable) return;
+      for (let index = 0; index < current.childCount - 1; index++) {
+        /** 当前分隔线对应的左栏序号。 */
+        const at = index;
+        /** 原生按钮允许键盘直接操作分隔线。 */
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'column-resizer';
+        handle.setAttribute('role', 'separator');
+        handle.setAttribute('aria-orientation', 'vertical');
+        handle.setAttribute('aria-label', t('editorBlocks.resizeColumn', { number: at + 1 }));
+        handle.title = t('editorBlocks.resizeHelp');
+        handle.textContent = '⋮';
+        handle.addEventListener('keydown', (event) => {
+          if (!editor.isEditable) return;
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          /** 键盘调整前的全部比例。 */
+          const values = widths();
+          /** 相邻两栏的可分配总量。 */
+          const pair = values[at]! + values[at + 1]!;
+          /** 每次键盘调整使用整体百分之二，且保留最小可读比例。 */
+          const next = Math.min(pair - 10, Math.max(10, values[at]! + (event.key === 'ArrowLeft' ? -2 : 2)));
+          values[at] = next;
+          values[at + 1] = pair - next;
+          commit(values);
+        });
+        handle.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0 || !editor.isEditable) return;
+          event.preventDefault();
+          cancelDrag?.();
+          /** 本次拖动的起点。 */
+          const start = event.clientX;
+          /** 初始分栏比例，用于取消与计算。 */
+          const initial = widths();
+          /** 实际内容宽度。 */
+          const available = content.getBoundingClientRect().width;
+          /** 相邻两栏共享的比例总量。 */
+          const pair = initial[at]! + initial[at + 1]!;
+          /** 当前临时拖动比例。 */
+          let pending = [...initial];
+          /** 释放事件监听并恢复拖动状态。 */
+          const cleanup = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', end);
+            window.removeEventListener('pointercancel', cancel);
+            window.removeEventListener('keydown', key, true);
+            window.removeEventListener('blur', cancel);
+            dom.classList.remove('is-resizing');
+            cancelDrag = null;
+          };
+          /** 指针移动仅预览宽度。 */
+          const move = (next: PointerEvent) => {
+            /** 保证最窄栏仍有可读宽度。 */
+            const minimum = Math.min(pair / 2, Math.max(10, 10000 / Math.max(1, available)));
+            /** 左栏的下一比例。 */
+            const left = Math.max(
+              minimum,
+              Math.min(
+                pair - minimum,
+                initial[at]! + ((next.clientX - start) / Math.max(1, available)) * 100,
+              ),
+            );
+            pending = [...initial];
+            pending[at] = left;
+            pending[at + 1] = pair - left;
+            preview(pending);
+            place();
+          };
+          /** 拖动结束后只提交一次。 */
+          const end = () => {
+            cleanup();
+            if (pending.some((value, part) => Math.abs(value - initial[part]!) > 0.01)) commit(pending);
+            else preview(initial);
+          };
+          /** 取消时完全恢复原始宽度。 */
+          const cancel = () => {
+            cleanup();
+            preview(initial);
+            place();
+          };
+          /** Escape允许取消尚未提交的拖动。 */
+          const key = (next: KeyboardEvent) => {
+            if (next.key === 'Escape') {
+              next.preventDefault();
+              next.stopPropagation();
+              cancel();
+            }
+          };
+          cancelDrag = cancel;
+          dom.classList.add('is-resizing');
+          window.addEventListener('pointermove', move);
+          window.addEventListener('pointerup', end, { once: true });
+          window.addEventListener('pointercancel', cancel, { once: true });
+          window.addEventListener('keydown', key, true);
+          window.addEventListener('blur', cancel, { once: true });
+        });
+        controls.append(handle);
+      }
+    };
+    /** 同步持久化外观与手柄的可访问范围。 */
+    const sync = () => {
+      dom.dataset.columnGap = String(current.attrs.gap ?? 'normal');
+      dom.style.setProperty('--columns', String(current.childCount));
+      preview(widths());
+      if (controls.childElementCount !== (editor.isEditable ? current.childCount - 1 : 0)) rebuild();
+      Array.from(controls.children).forEach((handle, index) => {
+        handle.setAttribute('aria-valuemin', '10');
+        handle.setAttribute('aria-valuemax', '90');
+        handle.setAttribute('aria-valuenow', String(Math.round(widths()[index]!)));
+      });
+      requestAnimationFrame(place);
+    };
+    /** 视口、侧栏与字体变化时重新定位分隔线。 */
+    const observer = new ResizeObserver(place);
+    observer.observe(content);
+    sync();
+    return {
+      dom,
+      contentDOM: content,
+      update(updated) {
+        if (updated.type !== current.type) return false;
+        current = updated;
+        if (!cancelDrag) sync();
+        return true;
+      },
+      stopEvent: (event) => controls.contains(event.target as globalThis.Node),
+      ignoreMutation: (mutation) =>
+        controls.contains(mutation.target) ||
+        (mutation.type === 'attributes' && (mutation.target === dom || mutation.target === content)),
+      destroy() {
+        cancelDrag?.();
+        observer.disconnect();
+      },
+    };
+  };
+}
 
 // a live list of the page's headings, each one jumps to its section
 export const TableOfContents = Node.create({
