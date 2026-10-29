@@ -1,3 +1,4 @@
+import { inlineDateValue } from '../inlineDate';
 import { metadataMarker, restoreBlockMetadata } from '../blockMetadata';
 import MarkdownIt from 'markdown-it';
 import type { StateBlock, StateInline, Token } from 'markdown-it';
@@ -25,6 +26,7 @@ export interface WikiLink {
 
 const md = new MarkdownIt('commonmark', { html: true }).enable(['table', 'strikethrough']);
 md.inline.ruler.before('link', 'wikilink', wikiLinkRule);
+md.inline.ruler.before('html_inline', 'inline_date', inlineDateRule);
 md.inline.ruler.after('backticks', 'math_inline', mathInlineRule);
 md.inline.ruler.after('strikethrough', 'highlight', highlightRule);
 md.block.ruler.before('fence', 'math_block', mathBlockRule, {
@@ -36,6 +38,25 @@ const TASK_PREFIX = /^\[([ xX])\](?:\s+|$)/;
 // obsidian callouts and github alerts: > [!type]+ optional title
 const CALLOUT = /^\[!([A-Za-z][\w-]{0,30})\]([+-]?)[ \t]*/;
 const WIKI = /^(!?)\[\[([^[\]\n]{0,400}?)\]\]/;
+
+/** 将完整可读time标签作为一个原子日期解析，普通time标签仍沿用原逻辑。 */
+function inlineDateRule(state: StateInline, silent: boolean): boolean {
+  if (state.src[state.pos] !== '<') return false;
+  /** 限制匹配长度，不吞后续正文或任意HTML。 */
+  const match = /^<time data-inline-date="" datetime="([0-9T:-]{10,16})">[^<>\n]{0,80}<\/time>/.exec(
+    state.src.slice(state.pos, Math.min(state.posMax, state.pos + 240)),
+  );
+  /** 只有真实日期才成为可编辑组件。 */
+  const value = match ? inlineDateValue(match[1]) : null;
+  if (!match || !value) return false;
+  if (!silent) {
+    /** 令牌只携带验证后的日期与时刻。 */
+    const token = state.push('inline_date', '', 0);
+    token.meta = { ...value };
+  }
+  state.pos += match[0].length;
+  return true;
+}
 
 // [[target#anchor|alias]] and ![[embed]], before markdown links so the brackets are not read as one
 function wikiLinkRule(state: StateInline, silent: boolean): boolean {
@@ -399,6 +420,9 @@ function inlineNodes(tokens: Token[], options: ParseOptions): DocNode[] {
       continue;
     }
     switch (token.type) {
+      case 'inline_date':
+        out.push({ type: 'inlineDate', attrs: { ...token.meta } });
+        break;
       case 'text':
         add(token.content);
         break;

@@ -12,6 +12,7 @@ export function Popover({
   placement = 'bottom-start',
   label,
   className,
+  fitViewport = false,
 }: {
   anchor: HTMLElement | DOMRect;
   onClose: () => void;
@@ -19,6 +20,8 @@ export function Popover({
   placement?: Placement;
   label: string;
   className?: string;
+  /** 日期等较高浮层允许沿两个方向避让，保证短屏不会裁切顶部。 */
+  fitViewport?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
@@ -36,20 +39,23 @@ export function Popover({
       void computePosition(reference, element, {
         placement,
         strategy: 'fixed',
-        middleware: [offset(6), flip({ padding: 8 }), shift({ padding: 8 })],
+        middleware: [offset(6), flip({ padding: 8 }), shift({ padding: 8, crossAxis: fitViewport })],
       }).then(({ x, y }) => {
         element.style.left = `${x}px`;
         element.style.top = `${y}px`;
         element.style.visibility = 'visible';
         if (focused) return;
         focused = true;
-        element.querySelector<HTMLElement>('[data-autofocus], input, select, button')?.focus();
+        (
+          element.querySelector<HTMLElement>('[data-autofocus]') ??
+          element.querySelector<HTMLElement>('input, select, button')
+        )?.focus();
       });
     place();
     const observer = new ResizeObserver(place);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [anchor, placement]);
+  }, [anchor, placement, fitViewport]);
 
   useEffect(() => {
     const trigger = anchor instanceof HTMLElement ? anchor : null;

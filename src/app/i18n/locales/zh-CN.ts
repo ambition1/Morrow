@@ -7,6 +7,17 @@ import type { TranslationSchema } from '../types';
 
 /** 简体中文词典，与英文词典保持键和插值参数一致。 */
 export const zhCN: TranslationSchema = {
+  inlineDate: {
+    picker: '日期与时间',
+    pickDate: '选择日期',
+    includeTime: '时刻',
+    time: '时间',
+    done: '完成',
+    previousYear: '上一年',
+    nextYear: '下一年',
+    edit: '编辑日期',
+    plusWeek: '+7 天',
+  },
   boot: {
     skipToContent: '跳转到内容',
     opening: '正在打开工作区…',
@@ -854,8 +865,8 @@ export const zhCN: TranslationSchema = {
       },
       date: {
         title: '日期',
-        description: '提及某一天，例如 @明天',
-        keywords: '日期 今天 明天 提醒 到期 date day today tomorrow reminder mention due',
+        description: '在当前文档显示日期与可选时刻',
+        keywords: 'date time calendar today tomorrow 日期 时间 日历 时刻',
       },
       embed: {
         title: '嵌入页面',

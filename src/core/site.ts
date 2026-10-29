@@ -1,3 +1,4 @@
+import { inlineDateText, inlineDateValue } from './inlineDate';
 import {
   normalizeBackground,
   normalizeBorder,
@@ -230,6 +231,17 @@ function inline(nodes: DocNode[] = [], context: RenderContext): string {
           return context.renderMath
             ? context.renderMath(latex, false)
             : `<code class="math">${escape(latex)}</code>`;
+        }
+        case 'inlineDate': {
+          /** 发布为可读时间，不创建每日笔记链接。 */
+          const label = escape(inlineDateText(node.attrs?.date, node.attrs?.time));
+          /** 验证后的datetime属性不包含不可信HTML。 */
+          const value = inlineDateValue(
+            `${node.attrs?.date ?? ''}${node.attrs?.time ? `T${node.attrs.time}` : ''}`,
+          );
+          return value
+            ? `<time datetime="${value.date}${value.time ? `T${value.time}` : ''}">${label}</time>`
+            : label;
         }
         case 'dateMention':
           return `<time class="date-mention" datetime="${escape(String(node.attrs?.date ?? ''))}">${escape(formatDate(String(node.attrs?.date ?? '')))}</time>`;

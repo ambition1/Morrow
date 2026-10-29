@@ -530,7 +530,8 @@ export const DateMention = Node.create<DateMentionOptions>({
   },
 
   parseHTML() {
-    return [{ tag: 'time[datetime]' }];
+    // 新日期组件的非法HTML也不能被旧每日笔记节点接管并吞掉原文。
+    return [{ tag: 'time[datetime]:not([data-inline-date])' }];
   },
 
   renderHTML({ node, HTMLAttributes }) {

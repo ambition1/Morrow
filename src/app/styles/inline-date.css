@@ -1,0 +1,95 @@
+/**
+ * 功能：文档内日期标签及日历浮层，复用既有日历和表面令牌。
+ * 作者：xuanli
+ * 创建时间：2026-10-30 00:38:47
+ */
+.prose .inline-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  vertical-align: baseline;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.prose .inline-date-chip:hover {
+  background: var(--accent-soft);
+}
+.prose .inline-date-chip:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.inline-date-popover {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.inline-date-calendar {
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px;
+}
+.inline-date-calendar .daily-calendar-head strong {
+  flex: 1;
+  text-align: center;
+}
+.inline-date-calendar .daily-calendar-day {
+  height: 36px;
+  border-radius: 50%;
+  font-variant-numeric: tabular-nums;
+}
+.inline-date-calendar .is-outside {
+  color: var(--text-faint);
+}
+.inline-date-calendar .is-selected {
+  background: var(--accent);
+  color: var(--on-accent, white);
+}
+.inline-date-shortcuts {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.inline-date-shortcuts .button {
+  color: var(--accent);
+  flex: 1;
+}
+.inline-date-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  min-height: 32px;
+}
+.inline-date-time-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.inline-date-time-row input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+.inline-date-time-row input[type='time'] {
+  width: 100px;
+  min-width: 0;
+}
+.inline-date-time-row > .button {
+  margin-left: auto;
+}
+@media (max-width: 600px) {
+  .inline-date-time-row input[type='time'] {
+    font-size: 16px;
+  }
+}

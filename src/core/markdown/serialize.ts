@@ -1,3 +1,4 @@
+import { inlineDateText, inlineDateValue } from '../inlineDate';
 import { withBlockMetadata } from '../blockMetadata';
 import { normalizeBookmarkHref } from '../blockAppearance';
 import { BACKGROUND_HEX, TEXT_HEX } from '../model';
@@ -279,6 +280,22 @@ function inline(nodes: DocNode[], options: SerializeOptions, inTable = false): s
     if (node.type === 'pageLink') {
       closeTo(0);
       out += pendingSpace + wikiLink(node, options, inTable);
+      pendingSpace = '';
+      continue;
+    }
+    if (node.type === 'inlineDate') {
+      closeTo(0);
+      /** 只输出经过验证的日期属性；正文始终能被普通HTML阅读器读取。 */
+      const value = inlineDateValue(
+        `${node.attrs?.date ?? ''}${node.attrs?.time ? `T${node.attrs.time}` : ''}`,
+      );
+      /** 非法内部数据降为可读文本，不插入不可信HTML。 */
+      const label = inlineDateText(node.attrs?.date, node.attrs?.time).replace(/[<>&]/g, '');
+      out +=
+        pendingSpace +
+        (value
+          ? `<time data-inline-date="" datetime="${value.date}${value.time ? `T${value.time}` : ''}">${label}</time>`
+          : label);
       pendingSpace = '';
       continue;
     }

@@ -1,4 +1,15 @@
 export const en = {
+  inlineDate: {
+    picker: 'Date and time',
+    pickDate: 'Choose date',
+    includeTime: 'Include time',
+    time: 'Time',
+    done: 'Done',
+    previousYear: 'Previous year',
+    nextYear: 'Next year',
+    edit: 'Edit date',
+    plusWeek: '+7 days',
+  },
   boot: {
     skipToContent: 'Skip to content',
     opening: 'Opening your workspace…',
@@ -856,8 +867,8 @@ export const en = {
       },
       date: {
         title: 'Date',
-        description: 'Mention a day, like @tomorrow',
-        keywords: 'date day today tomorrow reminder mention due',
+        description: 'Display a date and optional time in this document',
+        keywords: 'date time calendar today tomorrow',
       },
       embed: {
         title: 'Embed a page',

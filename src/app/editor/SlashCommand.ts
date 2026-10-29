@@ -1,3 +1,4 @@
+import { insertInlineDate } from './InlineDate';
 import { Extension } from '@tiptap/core';
 import type { Editor, Range } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
@@ -378,11 +379,10 @@ export const BLOCK_ITEMS: BlockItem[] = [
   {
     id: 'date',
     title: 'Date',
-    description: 'Mention a day, like @tomorrow',
+    description: 'Display a date and optional time in this document',
     icon: CalendarDays,
-    hint: '@',
-    keywords: 'date day today tomorrow reminder mention due',
-    run: (e, r) => chain(e, r).insertContent('@').run(),
+    keywords: 'date time calendar today tomorrow 日期 时间 日历 时刻',
+    run: (editor, range) => insertInlineDate(editor, range),
   },
   {
     id: 'embed',

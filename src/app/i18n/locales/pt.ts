@@ -1,6 +1,17 @@
 import type { TranslationSchema } from '../types';
 
 export const pt: TranslationSchema = {
+  inlineDate: {
+    picker: 'Data e hora',
+    pickDate: 'Escolher data',
+    includeTime: 'Incluir hora',
+    time: 'Hora',
+    done: 'Concluir',
+    previousYear: 'Ano anterior',
+    nextYear: 'Próximo ano',
+    edit: 'Editar data',
+    plusWeek: '+7 dias',
+  },
   boot: {
     skipToContent: 'Ir para o conteúdo',
     opening: 'Opening your workspace…',
@@ -862,8 +873,8 @@ export const pt: TranslationSchema = {
       },
       date: {
         title: 'Data',
-        description: 'Mencione um dia, como @amanhã',
-        keywords: 'data dia hoje amanha lembrete mencao date',
+        description: 'Mostrar data e hora opcional neste documento',
+        keywords: 'date time calendar today tomorrow',
       },
       embed: {
         title: 'Incorporar página',

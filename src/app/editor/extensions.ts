@@ -1,3 +1,4 @@
+import { InlineDate } from './InlineDate';
 import { Extension } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
@@ -112,6 +113,7 @@ export function createExtensions(options: ExtensionOptions): AnyExtension[] {
     Columns,
     Column,
     TableOfContents,
+    InlineDate,
     DateMention.configure({ openDate: options.openDate, findPages: options.findPages }),
     Details.configure({ persist: true, HTMLAttributes: { class: 'toggle' } }),
     DetailsSummary,
