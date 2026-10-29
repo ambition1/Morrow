@@ -732,7 +732,8 @@ export function BlockMenu({
       anchor={request.rect}
       entries={shown}
       onClose={onClose}
-      placement="left-start"
+      placement="right-start"
+      boundary={editor.view.dom.closest<HTMLElement>('.pane') ?? undefined}
       label={t('editor.blockOptions')}
     />
   );

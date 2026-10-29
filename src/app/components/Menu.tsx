@@ -1,4 +1,4 @@
-import { computePosition, flip, offset, shift } from '@floating-ui/dom';
+import { computePosition, flip, offset, shift, size } from '@floating-ui/dom';
 import type { Placement } from '@floating-ui/dom';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
@@ -23,9 +23,11 @@ interface MenuProps {
   onClose: () => void;
   placement?: Placement;
   label: string;
+  /** 内容块菜单限制在所属正文分栏，避免覆盖侧边目录。 */
+  boundary?: HTMLElement;
 }
 
-export function Menu({ anchor, entries, onClose, placement = 'bottom-start', label }: MenuProps) {
+export function Menu({ anchor, entries, onClose, placement = 'bottom-start', label, boundary }: MenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -39,14 +41,30 @@ export function Menu({ anchor, entries, onClose, placement = 'bottom-start', lab
     void computePosition(reference, element, {
       placement,
       strategy: 'fixed',
-      middleware: [offset(4), flip({ padding: 8 }), shift({ padding: 8 })],
+      middleware: [
+        offset(4),
+        flip({ padding: 8, boundary }),
+        shift({ padding: 8, boundary, crossAxis: !!boundary }),
+        ...(boundary
+          ? [
+              size({
+                boundary,
+                padding: 8,
+                apply({ availableWidth, availableHeight, elements }) {
+                  elements.floating.style.maxWidth = `${Math.max(0, availableWidth)}px`;
+                  elements.floating.style.maxHeight = `${Math.max(0, availableHeight)}px`;
+                },
+              }),
+            ]
+          : []),
+      ],
     }).then(({ x, y }) => {
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
       element.style.visibility = 'visible';
     });
     element.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  }, [anchor, placement]);
+  }, [anchor, placement, boundary]);
 
   useEffect(() => {
     const trigger = anchor instanceof HTMLElement ? anchor : null;

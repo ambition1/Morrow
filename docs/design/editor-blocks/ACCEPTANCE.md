@@ -34,3 +34,9 @@
 - [图册，浅色桌面](actual-gallery-light.png)
 - [图册，深色 768px](actual-gallery-dark-768.png)
 - [图册，深色手机](actual-gallery-mobile.png)
+
+## 内容块菜单边缘定位修正（2026-10-30）
+
+内容块菜单优先向右展开，以所属 `.pane` 为边界进行翻转、双向避让和尺寸限制，不能覆盖左侧页面树或跨到另一正文分栏。其他菜单的默认定位不变。
+
+独立临时库实测：1280px视口中菜单横向范围409–629px，正文分栏285–1269px，左侧目录10–274px；菜单完整位于正文内。类型、ESLint与Web构建通过。[实际截图](actual-block-menu-position.png)。
