@@ -1,6 +1,6 @@
 import { inlineText } from './doc';
 import type { DocNode, PageId, WorkspaceState } from './model';
-import { livePages } from './tree';
+import { ancestorsOf, livePages } from './tree';
 
 export interface TaskRef {
   pageId: PageId;
@@ -31,6 +31,12 @@ export function tasksInDoc(pageId: PageId, doc: DocNode): TaskRef[] {
 export function collectTasks(state: WorkspaceState): TaskRef[] {
   const result: TaskRef[] = [];
   for (const page of livePages(state.pages)) {
+    // 模板里的待办属于填写样例，实例化为普通笔记后才进入任务列表。
+    if (
+      page.kind === 'templates' ||
+      ancestorsOf(state.pages, page.id).some((parent) => parent.kind === 'templates')
+    )
+      continue;
     const doc = state.docs[page.id];
     if (doc) result.push(...tasksInDoc(page.id, doc));
   }

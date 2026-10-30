@@ -155,6 +155,14 @@ describe('links and tasks', () => {
       },
     });
     expect(collectTasks(state)).toEqual([{ pageId: 't', index: 0, text: 'Water plants', checked: true }]);
+    /** 模板副本及嵌套示例不得污染普通笔记的实际任务。 */
+    const withTemplates = run(
+      state,
+      { type: 'page.create', id: 'templates', parentId: null, kind: 'templates', now: 2 },
+      { type: 'page.create', id: 'example', parentId: 'templates', doc: state.docs.t!, now: 3 },
+      { type: 'page.create', id: 'nested', parentId: 'example', doc: state.docs.t!, now: 4 },
+    );
+    expect(collectTasks(withTemplates)).toEqual(collectTasks(state));
   });
 });
 
