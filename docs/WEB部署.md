@@ -145,6 +145,73 @@ HTTPS 模式另有 `caddy-data` 和 `caddy-config` 卷，分别保存证书状�
 ./scripts/deploy.sh https backup /srv/backups/morrow-migration.tar.gz
 ```
 
+## 自动备份与保留策略
+
+自动备份复用上述一致性备份流程，与发布和恢复共用同一项目锁。先准备项目目录之外的独立目录；生产环境建议该目录位于独立磁盘，并另外复制到其他服务器或对象存储。
+
+```sh
+# 目录由运行 Docker 的部署用户拥有；路径必须是绝对路径。
+mkdir -p /srv/backups/morrow
+MORROW_BACKUP_DIR=/srv/backups/morrow MORROW_BACKUP_KEEP=14 ./scripts/deploy.sh https auto-backup
+MORROW_BACKUP_DIR=/srv/backups/morrow ./scripts/deploy.sh https backup-status
+```
+
+`MORROW_BACKUP_KEEP` 默认14，允许1至9999。只清理当前 Compose 项目的 `<项目名>-auto-<UTC时间>-<PID>.tar.gz` 普通文件；人工备份、其他项目和符号链接不参与清理。最新生成的归档始终保留。备份完成且原本运行的服务重新启动成功后，才清理旧归档并更新成功记录。失败返回非零退出码、输出中文错误，临时文件清理且保留上次成功记录。项目目录内的目录及指向项目内部的符号链接不能作为自动备份目标。
+
+每项目的 `<项目名>-backup.status` 包含最近尝试时间、退出码、最近成功时间和最近成功文件。`backup-status` 在没有记录或最近任务失败时返回非零；监控还应检查 `last_success` 是否超过预期周期，不能只看任务是否启动。已有操作占锁时本次任务直接失败并写任务日志，不覆盖正在执行任务的状态。强制杀进程或机器断电无法写入失败状态，因此时间过期检查仍然必要。
+
+### Linux 定时调度（管理员按需安装）
+
+下面配置每天服务器本地时间03:00执行；服务停机期间错过的任务在下次启动后补跑。示例路径为 `/srv/Morrow`，部署账号为 `deploy`，按目标服务器实际情况修改。账号需要能操作 Docker，并有备份目录写入权限。仓库不会自动安装或启动系统任务。
+
+`/etc/systemd/system/morrow-backup.service`：
+
+```ini
+[Unit]
+Description=Morrow consistent backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/srv/Morrow
+Environment=MORROW_BACKUP_DIR=/srv/backups/morrow
+Environment=MORROW_BACKUP_KEEP=14
+ExecStart=/srv/Morrow/scripts/deploy.sh https auto-backup
+```
+
+`/etc/systemd/system/morrow-backup.timer`：
+
+```ini
+[Unit]
+Description=Daily Morrow backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=morrow-backup.service
+
+[Install]
+WantedBy=timers.target
+```
+
+确认手动执行与恢复演练成功后，再由管理员启用：
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now morrow-backup.timer
+systemctl list-timers morrow-backup.timer
+systemctl status morrow-backup.service
+journalctl -u morrow-backup.service --since yesterday
+```
+
+将 service 失败状态及成功时间过期接入服务器现有监控，失败日志位于 journal。脚本不内置邮件、聊天消息或额外账号。备份会短暂停止应用，建议选择低使用时段。
+
+### 自动备份验证
+
+`node --test scripts/deploy-backup.test.mjs` 使用独立临时目录和 Docker 替身执行真实 tar/gzip，覆盖保留范围、打包失败、启动失败、失败后成功记录保留、项目锁、目录限制和空目标恢复。2026-10-30 另使用真实 Docker 独立项目和空数据卷演练：原库与恢复库均为1篇笔记、1个附件、1份历史、1项回收站，正文一致；临时项目及卷已清理，未访问用户运行中的项目或数据卷。定时配置仅提供部署示例，尚未在目标服务器启用。
+
 ## 恢复与迁移
 
 恢复脚本只允许**没有运行应用、且数据卷为空**的目标。不会清空或覆盖原有卷。只恢复管理员自己生成的可信 tar.gz；界面导出的 JSON 备份仍应通过界面“恢复备份”导入。
@@ -209,7 +276,7 @@ git pull --ff-only
 
 ## 操作互斥
 
-`up`、`rollback`、`stop`、`down`、`backup`、`restore` 按 Compose 实际项目名互斥；服务恢复完成后才释放锁。请从同一份代码目录统一使用脚本管理，不要让定时任务、人工操作和另一份代码副本绕过脚本同时修改同一实例。
+`up`、`rollback`、`stop`、`down`、`backup`、`auto-backup`、`restore` 按 Compose 实际项目名互斥；服务恢复完成后才释放锁。请从同一份代码目录统一使用脚本管理，不要让定时任务、人工操作和另一份代码副本绕过脚本同时修改同一实例。
 
 锁位于 `.deploy-locks/<项目名>/`，记录发起操作的进程 PID。正常退出、失败和常规终止信号均会清理锁。机器断电或强制杀进程可能留下锁；不要直接重试覆盖。先确认记录的进程及该项目的临时备份/恢复容器都已退出，再手动清理残留锁目录。`status` 和 `logs` 不阻塞修改操作。
 
