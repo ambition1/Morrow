@@ -7,6 +7,8 @@ export type SettingsSection = 'general' | 'appearance' | 'assistant' | 'sync' | 
 export type Dialog =
   | { kind: 'settings'; section?: SettingsSection }
   | { kind: 'shortcuts' }
+  /** 查看本机草稿与服务器内容，用户明确选择后才恢复。 */
+  | { kind: 'recovery' }
   | { kind: 'move'; pageId: PageId }
   | { kind: 'history'; pageId: PageId }
   | { kind: 'icon'; pageId: PageId }

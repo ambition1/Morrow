@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
+import { webRecovery } from './platform/webRecovery';
 import { applyFonts } from './platform/fonts';
 import { useGlassLight } from './useGlassLight';
 import { ACTIONS, matchesShortcut, runAction } from './actions';
@@ -101,9 +102,16 @@ function useLifecycle() {
     };
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       commitEditors();
-      if (desktop || !session.queue.hasPending()) return;
+      /** 已确认保护的主动刷新不应再次被旧生命周期处理器拦截。 */
+      if (
+        desktop ||
+        webRecovery?.safeToReload ||
+        (!session.queue.hasPending() && !webRecovery?.getStatus().pending)
+      )
+        return;
       void session.flush();
       event.preventDefault();
+      event.returnValue = '';
     };
     const onVisibility = () => document.visibilityState === 'hidden' && flush();
     window.addEventListener('beforeunload', onBeforeUnload);

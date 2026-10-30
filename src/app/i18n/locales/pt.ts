@@ -1,6 +1,32 @@
 import type { TranslationSchema } from '../types';
 
 export const pt: TranslationSchema = {
+  reliability: {
+    title: 'Rascunhos e conflitos',
+    found: 'Existem rascunhos locais não sincronizados.',
+    review: 'Ver rascunhos',
+    localSaved: 'Salvo neste dispositivo, aguardando sincronização',
+    localUnavailable: 'A proteção local está indisponível. Mantenha a página aberta ou baixe as alterações.',
+    explanation:
+      'As duas versões são mantidas até sua escolha. Recarregar mantém os rascunhos; restaurar verifica a versão do servidor.',
+    refreshFirst: 'O servidor mudou. Proteja os rascunhos e recarregue antes de restaurar.',
+    reload: 'Proteger e recarregar',
+    drafts: 'Rascunhos locais',
+    server: 'Conteúdo atual do servidor',
+    local: 'Rascunho local',
+    missing: 'A página está indisponível. Mantenha uma cópia.',
+    keepCopy: 'Manter como cópia',
+    copySuffix: '(cópia recuperada)',
+    download: 'Baixar rascunho',
+    merge: 'Editar Markdown combinado',
+    saveMerge: 'Salvar combinação',
+    useServer: 'Usar servidor e descartar rascunho',
+    empty: 'Não há rascunhos para recuperar.',
+    beforeMerge: 'Antes da combinação',
+    saveFailed: 'Falha ao salvar. O rascunho foi mantido.',
+    conflict: 'Resolver conflito',
+    protecting: 'Protegendo rascunho local',
+  },
   inlineDate: {
     picker: 'Data e hora',
     pickDate: 'Escolher data',
@@ -416,6 +442,15 @@ export const pt: TranslationSchema = {
     recentVaultsAria: 'Cofres recentes',
   },
   dialogs: {
+    captureLocalFailed:
+      'Não foi possível guardar o rascunho local. Mantém esta janela aberta e tenta novamente.',
+    captureSave: 'Guardar nota',
+    captureSaved: 'Nota guardada.',
+    captureLocation: 'Guardar em',
+    captureFiles: 'Adicionar imagens ou anexos',
+    captureRemove: 'Remover',
+    captureFailed:
+      'Não foi possível guardar tudo. O texto enviado não será duplicado. Mantém esta janela aberta e tenta novamente; os anexos pendentes continuam na lista.',
     keyFormatting: 'Negrito, itálico, sublinhado',
     keyStrike: 'Tachado',
     keyLink: 'Vincular o texto selecionado',
@@ -938,6 +973,18 @@ export const pt: TranslationSchema = {
     stats: '{nodes} páginas · {links} conexões',
   },
   searchView: {
+    filters: {
+      scope: 'Âmbito da pesquisa',
+      all: 'Todos',
+      tag: 'Etiqueta',
+      after: 'Alterado desde',
+      before: 'Alterado até',
+      attachment: 'Tipo de anexo',
+      image: 'Imagens',
+      file: 'Ficheiros',
+      clear: 'Limpar filtros',
+      help: 'Os filtros usam referências e nomes de ficheiros; não incluem OCR, texto PDF ou transcrição de áudio.',
+    },
     tips: 'Use {phrase} para uma frase, {exclude} para deixar páginas de fora e {tag} para manter as páginas com uma etiqueta.',
     tipPhrase: '"palavras exatas"',
     tipExclude: '-palavra',

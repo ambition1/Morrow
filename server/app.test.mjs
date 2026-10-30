@@ -122,10 +122,13 @@ test('家庭共享无需登录、冲突保护、附件边界与重启恢复', as
     );
     assert.deepEqual(attempts.map((response) => response.status).sort(), [200, 409]);
     /** 重启无需重新登录，旧进程世代的版本仍然无效。 */
+    const identity = await (await api('vault/identity')).json();
+    assert.match(identity.id, /^[a-f0-9]{48}$/);
     const oldRevision = await currentRevision();
     await stop();
     await start();
     assert.equal((await api('vault/scan')).status, 200);
+    assert.deepEqual(await (await api('vault/identity')).json(), identity);
     assert.equal((await api('vault/apply', 'POST', ops, oldRevision)).status, 409);
     assert.equal(
       await (await api('vault/text?path=' + encodeURIComponent('中文笔记.md'))).json(),

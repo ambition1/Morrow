@@ -50,17 +50,23 @@ const messages: Record<string, string> = {
   'That password is not right.': '密码不正确。',
   'The page was decrypted but could not be read.': '页面已解密，但无法读取内容。',
   'Failed to fetch': '网络连接失败，请检查连接后重试。',
+  'This page has unsynced drafts. Resolve them before encrypting.':
+    '此页面还有未同步草稿，请先处理草稿再加密。',
+  'Encrypted pages cannot keep plain drafts.': '此页面已加密，无法保存明文草稿。',
   'Load failed': '加载失败，请检查网络连接。',
 };
 
 /** 翻译已知错误和存储错误前缀；文件名和技术详情保持原样。 */
 export function localizeError(message: string, locale: SupportedLocale = getLocale()): string {
   if (locale !== 'zh-CN') return message;
+  message = message.replace(/^Error:\s*/, '');
   return (
     messages[message] ??
     message
       .replace(/^Could not open the folder (.*): /, '无法打开笔记库 $1：')
       .replace(/^Could not open your workspace: /, '无法打开工作区：')
       .replace(/^Could not save: /, '无法保存：')
+      .replace(/^The file could not be saved: /, '无法保存附件：')
+      .replace(/Failed to fetch/g, '网络连接失败，请检查连接后重试。')
   );
 }

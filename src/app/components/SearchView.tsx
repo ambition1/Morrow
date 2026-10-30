@@ -2,7 +2,10 @@ import { Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { displayTitle } from '../i18n/labels';
 import { searchWorkspace } from '../../core/search';
-import type { SearchResult } from '../../core/search';
+import { encodeSearchLocation } from '../../core/searchLocation';
+import { livePages } from '../../core/tree';
+import { Select } from './Select';
+import type { SearchFilters, SearchResult } from '../../core/search';
 import { navigate, openPage } from '../router';
 import { usePane } from '../tabs';
 import { useWorkspace } from '../workspace';
@@ -36,6 +39,27 @@ export function SearchView({ query }: { query: string }) {
   const pane = usePane();
   const [text, setText] = useState(query);
   const [order, setOrder] = useState<Order>('best');
+  /** 页面范围与筛选条件不改变笔记库内容。 */
+  const [filters, setFilters] = useState<SearchFilters>({});
+  /** 日期输入保留本地日历日期，不通过UTC引入一天偏移。 */
+  const [after, setAfter] = useState('');
+  /** 结束日期含当日的全部时间。 */
+  const [before, setBefore] = useState('');
+  /** 空查询也可使用筛选查看范围内页面。 */
+  const active = Boolean(
+    query.trim() || filters.rootId || filters.tag || filters.attachment || after || before,
+  );
+  /** 搜索命中的指定片段使用当前文档校验和编码。 */
+  const openResult = (result: SearchResult, index = 0) => {
+    /** 没有正文片段的标题结果正常打开。 */
+    const snippet = result.snippets[index];
+    /** 文档不存在时保留文字回退。 */
+    const doc = state.docs[result.page.id];
+    openPage(
+      result.page.id,
+      snippet && doc ? encodeSearchLocation(doc, snippet.match, snippet.offset) : null,
+    );
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,8 +74,16 @@ export function SearchView({ query }: { query: string }) {
   }, [text, query, pane]);
 
   const results = useMemo(
-    () => sorted(searchWorkspace(state, query, MAX_RESULTS, SNIPPETS_PER_PAGE), order),
-    [state, query, order],
+    () =>
+      sorted(
+        searchWorkspace(state, query, MAX_RESULTS, SNIPPETS_PER_PAGE, {
+          ...filters,
+          ...(after ? { updatedAfter: new Date(`${after}T00:00:00`).getTime() } : {}),
+          ...(before ? { updatedBefore: new Date(`${before}T23:59:59.999`).getTime() } : {}),
+        }),
+        order,
+      ),
+    [state, query, order, filters, after, before],
   );
 
   return (
@@ -89,7 +121,78 @@ export function SearchView({ query }: { query: string }) {
                 tag: <code>{t('searchView.tipTag')}</code>,
               })}
             </p>
-            {query.trim() && (
+            <div className="search-filters">
+              <label className="field">
+                <span>{t('searchView.filters.scope')}</span>
+                <Select
+                  value={filters.rootId ?? ''}
+                  label={t('searchView.filters.scope')}
+                  options={[
+                    { value: '', label: t('searchView.filters.all') },
+                    ...livePages(state.pages).map((page) => ({ value: page.id, label: displayTitle(page) })),
+                  ]}
+                  onChange={(rootId) => setFilters({ ...filters, rootId: rootId || null })}
+                />
+              </label>
+              <label className="field">
+                <span>{t('searchView.filters.tag')}</span>
+                <input
+                  className="text-input"
+                  value={filters.tag ?? ''}
+                  onChange={(event) => setFilters({ ...filters, tag: event.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>{t('searchView.filters.after')}</span>
+                <input
+                  className="text-input"
+                  type="date"
+                  value={after}
+                  onChange={(event) => setAfter(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>{t('searchView.filters.before')}</span>
+                <input
+                  className="text-input"
+                  type="date"
+                  value={before}
+                  onChange={(event) => setBefore(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>{t('searchView.filters.attachment')}</span>
+                <Select
+                  value={filters.attachment ?? ''}
+                  label={t('searchView.filters.attachment')}
+                  options={[
+                    { value: '', label: t('searchView.filters.all') },
+                    { value: 'image', label: t('searchView.filters.image') },
+                    { value: 'pdf', label: 'PDF' },
+                    { value: 'file', label: t('searchView.filters.file') },
+                  ]}
+                  onChange={(attachment) =>
+                    setFilters({
+                      ...filters,
+                      attachment: attachment ? (attachment as SearchFilters['attachment']) : undefined,
+                    })
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                className="button small"
+                onClick={() => {
+                  setFilters({});
+                  setAfter('');
+                  setBefore('');
+                }}
+              >
+                {t('searchView.filters.clear')}
+              </button>
+            </div>
+            <p className="muted small">{t('searchView.filters.help')}</p>
+            {active && (
               <div className="search-meta">
                 <span className="muted">
                   {results.length === 1
@@ -115,13 +218,13 @@ export function SearchView({ query }: { query: string }) {
               </div>
             )}
           </header>
-          {query.trim() && results.length === 0 && (
+          {active && results.length === 0 && (
             <div className="empty-state compact">
               <Search size={24} strokeWidth={1.5} />
               <p>{t('searchView.noMatches', { query })}</p>
             </div>
           )}
-          {!query.trim() && (
+          {!active && (
             <div className="empty-state compact search-intro">
               <Search size={24} strokeWidth={1.5} aria-hidden="true" />
               <p>{t('searchView.placeholder')}</p>
@@ -130,31 +233,36 @@ export function SearchView({ query }: { query: string }) {
           <ul className="search-results">
             {results.map((result) => (
               <li key={result.page.id}>
-                <button
-                  type="button"
+                <div
                   className="search-result"
                   data-page-id={result.page.id}
                   title={t('searchView.resultTooltip')}
-                  onClick={() => openPage(result.page.id, result.titleMatch ? null : result.firstMatch)}
                 >
                   <span className="search-result-head">
                     <span className="tree-icon">
                       <PageIcon page={result.page} />
                     </span>
-                    <span className="search-result-title">{displayTitle(result.page)}</span>
+                    <button type="button" className="search-result-title" onClick={() => openResult(result)}>
+                      {displayTitle(result.page)}
+                    </button>
                     {result.path.length > 0 && (
                       <span className="search-result-path">{result.path.join(' / ')}</span>
                     )}
                     <span className="search-result-time">{relativeTime(result.page.updatedAt)}</span>
                   </span>
                   {result.snippets.map((snippet, index) => (
-                    <span key={index} className="search-snippet">
+                    <button
+                      type="button"
+                      key={index}
+                      className="search-snippet"
+                      onClick={() => openResult(result, index)}
+                    >
                       {snippet.before}
                       <mark>{snippet.match}</mark>
                       {snippet.after}
-                    </span>
+                    </button>
                   ))}
-                </button>
+                </div>
               </li>
             ))}
           </ul>

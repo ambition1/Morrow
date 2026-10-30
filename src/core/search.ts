@@ -8,6 +8,36 @@ export interface SearchSnippet {
   before: string;
   match: string;
   after: string;
+  /** 命中在可读正文中的起点，只有原文未改变时才使用。 */
+  offset: number | null;
+}
+
+/** 搜索筛选只读取页面元数据及附件名称，不进行OCR或远端请求。 */
+export interface SearchFilters {
+  /** 限定此页面及其子页面；空值表示整个笔记库。 */
+  rootId?: PageId | null;
+  /** 标签与查询中的标签条件同时满足。 */
+  tag?: string;
+  /** 修改时间的闭区间，单位为毫秒。 */
+  updatedAfter?: number;
+  /** 修改时间的闭区间终点。 */
+  updatedBefore?: number;
+  /** 附件节点类型，PDF按文件名或MIME识别。 */
+  attachment?: 'image' | 'pdf' | 'file';
+}
+
+/** 检查文档实际引用的附件类型；不会把普通正文中的文件名当成附件。 */
+function hasAttachment(doc: DocNode | undefined, kind: NonNullable<SearchFilters['attachment']>): boolean {
+  if (!doc) return false;
+  if (kind === 'image' && doc.type === 'image') return true;
+  if (
+    doc.type === 'fileAttachment' &&
+    (kind === 'file' ||
+      (kind === 'pdf' &&
+        (/\.pdf$/i.test(String(doc.attrs?.name ?? '')) || doc.attrs?.type === 'application/pdf')))
+  )
+    return true;
+  return (doc.content ?? []).some((child) => hasAttachment(child, kind));
 }
 
 export interface SearchResult {
@@ -92,9 +122,19 @@ export function searchWorkspace(
   query: string,
   limit = 50,
   snippetCount = 1,
+  filters: SearchFilters = {},
 ): SearchResult[] {
   const { terms, excluded, tags: wantedTags } = parseQuery(query);
-  if (terms.length === 0 && wantedTags.length === 0) return [];
+  if (filters.tag?.trim()) wantedTags.push(foldText(filters.tag.trim().replace(/^#/, '')));
+  if (
+    terms.length === 0 &&
+    wantedTags.length === 0 &&
+    !filters.rootId &&
+    filters.updatedAfter === undefined &&
+    filters.updatedBefore === undefined &&
+    !filters.attachment
+  )
+    return [];
   const phrase = terms.join(' ');
   const scored: Array<{
     page: PageMeta;
@@ -105,6 +145,15 @@ export function searchWorkspace(
   }> = [];
 
   for (const page of livePages(state.pages)) {
+    if (
+      filters.rootId &&
+      page.id !== filters.rootId &&
+      !ancestorsOf(state.pages, page.id).some((ancestor) => ancestor.id === filters.rootId)
+    )
+      continue;
+    if (filters.updatedAfter !== undefined && page.updatedAt < filters.updatedAfter) continue;
+    if (filters.updatedBefore !== undefined && page.updatedAt > filters.updatedBefore) continue;
+    if (filters.attachment && !hasAttachment(state.docs[page.id], filters.attachment)) continue;
     if (wantedTags.length > 0) {
       const tags = tagsOf(page, state.docs[page.id]);
       if (!wantedTags.every((wanted) => tags.some((tag) => tagMatches(foldText(tag), wanted)))) continue;
@@ -204,6 +253,7 @@ function makeSnippet(
   const start = Math.max(lineStart, index - radius);
   const end = Math.min(lineEnd, index + term.length + radius);
   return {
+    offset: aligned ? index : null,
     before: (start > lineStart ? '…' : '') + source.slice(start, index).trimStart(),
     match: source.slice(index, index + term.length),
     after: source.slice(index + term.length, end).trimEnd() + (end < lineEnd ? '…' : ''),

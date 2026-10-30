@@ -22,8 +22,13 @@ export async function webRequest(path: string, init?: RequestInit): Promise<Resp
   return response;
 }
 
+/** Web 桥接公开只读版本，用作草稿共同基准，不允许强制推进。 */
+export interface WebVaultBridge extends VaultBridge {
+  getRevision(): string;
+}
+
 /** 创建使用版本检查保护的服务器文件桥接。 */
-export function webVaultBridge(): VaultBridge {
+export function webVaultBridge(): WebVaultBridge {
   /** 当前客户端已知的服务端版本；只有加载和本客户端写入会推进。 */
   let revision = '0';
   /** 同一个浏览器的请求串行执行，避免自身触发版本冲突。 */
@@ -63,6 +68,8 @@ export function webVaultBridge(): VaultBridge {
 
   return {
     root: t('web.storageName'),
+    strictConflicts: true,
+    getRevision: () => revision,
     scan: () => request('scan'),
     apply: (ops) =>
       request('apply', {

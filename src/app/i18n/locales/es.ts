@@ -1,6 +1,33 @@
 import type { TranslationSchema } from '../types';
 
 export const es: TranslationSchema = {
+  reliability: {
+    title: 'Borradores y conflictos',
+    found: 'Hay borradores locales sin sincronizar.',
+    review: 'Ver borradores',
+    localSaved: 'Guardado localmente, pendiente de sincronizar',
+    localUnavailable:
+      'La protección local no está disponible. Mantén esta página abierta o descarga los cambios.',
+    explanation:
+      'Se conservan ambas versiones hasta que elijas. Recargar conserva los borradores y restaurar comprueba la versión del servidor.',
+    refreshFirst: 'El servidor cambió. Protege los borradores y recarga antes de restaurar.',
+    reload: 'Proteger y recargar',
+    drafts: 'Borradores locales',
+    server: 'Contenido actual del servidor',
+    local: 'Borrador local',
+    missing: 'La página no está disponible. Conserva una copia.',
+    keepCopy: 'Conservar como copia',
+    copySuffix: '(copia recuperada)',
+    download: 'Descargar borrador',
+    merge: 'Editar Markdown combinado',
+    saveMerge: 'Guardar combinación',
+    useServer: 'Usar servidor y descartar borrador',
+    empty: 'No hay borradores que recuperar.',
+    beforeMerge: 'Antes de combinar',
+    saveFailed: 'Error al guardar. Se conserva el borrador.',
+    conflict: 'Resolver conflicto',
+    protecting: 'Protegiendo borrador local',
+  },
   inlineDate: {
     picker: 'Fecha y hora',
     pickDate: 'Elegir fecha',
@@ -416,6 +443,14 @@ export const es: TranslationSchema = {
     recentVaultsAria: 'Bóvedas recientes',
   },
   dialogs: {
+    captureLocalFailed: 'No se pudo guardar el borrador local. Mantén esta ventana abierta y reintenta.',
+    captureSave: 'Guardar nota',
+    captureSaved: 'Nota guardada.',
+    captureLocation: 'Guardar en',
+    captureFiles: 'Añadir imágenes o archivos',
+    captureRemove: 'Quitar',
+    captureFailed:
+      'No se pudo guardar todo. El texto enviado no se duplicará. Mantén esta ventana abierta y reintenta; los archivos pendientes siguen en la lista.',
     keyFormatting: 'Negrita, cursiva, subrayado',
     keyStrike: 'Tachado',
     keyLink: 'Enlazar el texto seleccionado',
@@ -938,6 +973,18 @@ export const es: TranslationSchema = {
     stats: '{nodes} páginas · {links} enlaces',
   },
   searchView: {
+    filters: {
+      scope: 'Ámbito de búsqueda',
+      all: 'Todo',
+      tag: 'Etiqueta',
+      after: 'Modificado desde',
+      before: 'Modificado hasta',
+      attachment: 'Tipo de archivo',
+      image: 'Imágenes',
+      file: 'Archivos',
+      clear: 'Quitar filtros',
+      help: 'Los filtros usan referencias y nombres de archivos; no incluyen OCR, texto PDF ni transcripción de audio.',
+    },
     tips: 'Usa {phrase} para una frase, {exclude} para excluir páginas y {tag} para quedarte con las páginas que tengan una etiqueta.',
     tipPhrase: '"palabras exactas"',
     tipExclude: '-palabra',

@@ -426,6 +426,14 @@ export class VaultRepository implements WorkspaceRepository {
       if (failedAt === -1) throw new Error('The desktop shell stopped before finishing the save.');
       const failed = results[failedAt]!;
       const op = pending[failedAt]!;
+      if (!failed.ok && failed.code === 'conflict' && this.bridge.strictConflicts) {
+        this.layout = layout;
+        throw Object.assign(new Error(failed.message), {
+          status: 409,
+          current: failed.current,
+          path: 'path' in op ? op.path : op.from,
+        });
+      }
       if (!failed.ok && failed.code === 'conflict' && op.op === 'write' && op.id) {
         // the file changed on disk in the meantime, that version is kept in page history before it is replaced
         if (failed.current !== null) await this.keepDiskVersion(op.id, failed.current);

@@ -1,3 +1,4 @@
+import { appendCapture } from '../core/capture';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import katex from 'katex';
 import {
@@ -207,50 +208,33 @@ export function openToday(date = new Date()): void {
 }
 
 // a quick note from anywhere, added to the end of today's note with the time, a line starting [ ] becomes a task
-export function captureToToday(text: string): boolean {
+export function captureToToday(
+  text: string,
+  targetId: PageId | null = null,
+  files: FileMeta[] = [],
+): boolean {
+  /** 可选目标沿用现有笔记；缺省仍写入今日笔记。 */
   const clean = text.trim();
-  if (!clean) return false;
+  if (!clean && !files.length) return false;
   commitEditors();
-  const id = ensureToday();
+  /** 提交时重新检查页面状态，异步上传期间可能被删除或加密。 */
+  const id = targetId ?? ensureToday();
   if (!id) return false;
+  /** 只向可写的普通笔记追加内容。 */
+  const page = getState().pages[id];
+  if (
+    !page ||
+    page.trashedAt !== null ||
+    page.encrypted ||
+    page.kind !== 'page' ||
+    isEffectivelyTrashed(getState().pages, id)
+  )
+    return false;
+  /** 读取最新正文，避免覆盖上传期间的其他本机编辑。 */
   const doc = getState().docs[id] ?? { type: 'doc', content: [] };
+  /** 使用本地时间，快速记录不会转换日期或生成额外版本。 */
   const time = new Date().toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
-  const blocks = clean.split(/\n{2,}/).map((part, index) => {
-    const task = /^\[( |x)\]\s*/i.exec(part);
-    const body = task ? part.slice(task[0].length) : part;
-    const lines = body
-      .split('\n')
-      .flatMap((line, i) => [
-        ...(i > 0 ? [{ type: 'hardBreak' }] : []),
-        ...(line ? [{ type: 'text', text: line }] : []),
-      ]);
-    const content =
-      index === 0 && !task
-        ? [{ type: 'text', text: `${time} `, marks: [{ type: 'bold' }] }, ...lines]
-        : lines;
-    return task
-      ? {
-          type: 'taskList',
-          content: [
-            {
-              type: 'taskItem',
-              attrs: { checked: task[1] !== ' ' },
-              content: [{ type: 'paragraph', content }],
-            },
-          ],
-        }
-      : { type: 'paragraph', content };
-  });
-  const existing = (doc.content ?? []).filter(
-    (node, _index, all) => !(all.length === 1 && node.type === 'paragraph' && !node.content?.length),
-  );
-  const result = run({
-    type: 'page.setDoc',
-    id,
-    now: Date.now(),
-    doc: { ...doc, content: [...existing, ...blocks] },
-  });
-  return result.ok;
+  return run({ type: 'page.setDoc', id, now: Date.now(), doc: appendCapture(doc, clean, files, time) }).ok;
 }
 
 export function createTemplatesPage(): PageId | null {

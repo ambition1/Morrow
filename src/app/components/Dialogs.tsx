@@ -7,6 +7,7 @@ import { ACTIONS, formatShortcut } from '../actions';
 import { expandPage, movePage } from '../operations';
 import { closeDialog, useUi } from '../ui';
 import { run, useWorkspace } from '../workspace';
+import { RecoveryDialog } from './RecoveryDialog';
 import { CaptureDialog } from './CaptureDialog';
 import { EmojiPicker } from './EmojiPicker';
 import { EncryptDialog } from './EncryptDialog';
@@ -24,6 +25,8 @@ export function Dialogs() {
   const { dialog } = useUi();
   if (!dialog) return null;
   switch (dialog.kind) {
+    case 'recovery':
+      return <RecoveryDialog />;
     case 'settings':
       return <SettingsDialog section={dialog.section} />;
     case 'shortcuts':

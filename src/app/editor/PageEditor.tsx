@@ -1,3 +1,5 @@
+import { decodeSearchLocation, locateSearchText } from '../../core/searchLocation';
+import { inlineText } from '../../core/doc';
 import { Editor, Extension } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { Fragment } from '@tiptap/pm/model';
@@ -323,8 +325,46 @@ export function PageEditor({ pageId, doc, editable, find, anchor, onExitTop, onD
   // opens with the search match selected and in view
   useEffect(() => {
     if (!editor || !find) return;
-    const term = find.toLowerCase();
+    /** 新搜索结果携带可校验的精确位置，旧链接仍使用普通词语。 */
+    const location = decodeSearchLocation(find);
+    /** 文档变化时只用命中词退回现有页内查找。 */
+    const term = (location?.match ?? find).toLowerCase();
     let found: { from: number; to: number } | null = null;
+    /** 路径由正文原文校验；节点位置使用编辑器实际尺寸而非推测。 */
+    const target = location ? locateSearchText(editor.getJSON() as DocNode, location) : null;
+    if (target) {
+      /** 从根节点逐层累计兄弟节点尺寸。 */
+      let node = editor.state.doc;
+      /** 目标文字块的外部起点。 */
+      let position = -1;
+      for (const index of target.path) {
+        position += 1;
+        for (let sibling = 0; sibling < index; sibling++) position += node.child(sibling).nodeSize;
+        node = node.child(index);
+      }
+      /** 日期、链接等行内原子的可读长度可能不同于编辑器尺寸，逐项映射。 */
+      let readable = 0;
+      /** 编辑器内联偏移。 */
+      let internal = 0;
+      /** 匹配的首尾均须落在文字节点内，原子内容交给安全回退。 */
+      let start: number | null = null;
+      let end: number | null = null;
+      node.forEach((child) => {
+        /** 与检索相同的可读表示。 */
+        const text = inlineText(child.toJSON() as DocNode);
+        if (child.isText && target.offset >= readable && target.offset < readable + text.length)
+          start = position + 1 + internal + target.offset - readable;
+        if (
+          child.isText &&
+          target.offset + term.length > readable &&
+          target.offset + term.length <= readable + text.length
+        )
+          end = position + 1 + internal + target.offset + term.length - readable;
+        readable += text.length;
+        internal += child.nodeSize;
+      });
+      if (start !== null && end !== null) found = { from: start, to: end };
+    }
     editor.state.doc.descendants((node, pos) => {
       if (found) return false;
       if (!node.isTextblock) return true;

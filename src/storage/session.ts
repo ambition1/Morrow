@@ -27,7 +27,7 @@ export class WorkspaceSession {
     readonly unreadable: Set<PageId>,
     readonly problems: readonly string[],
     readonly firstRun: boolean,
-    options: SaveQueueOptions,
+    private readonly options: SaveQueueOptions,
   ) {
     this.state = initial;
     this.queue = new SaveQueue(repository, () => this.state, {
@@ -88,18 +88,34 @@ export class WorkspaceSession {
 
   async protectPage(id: PageId, password: string): Promise<Result<WorkspaceState>> {
     if (!this.repository.protectPage) return fail('Encrypted pages need a vault folder.');
-    await this.queue.flush();
-    await this.repository.protectPage(id, password);
+    if (!(await this.queue.flush())) return fail('Current changes could not be saved.');
+    /** 生成密钥失败时页面还未改变，可以撤回本机保护标记。 */
+    let draftProtected = false;
+    try {
+      await this.options.beforeProtect?.(id);
+      draftProtected = true;
+      await this.repository.protectPage(id, password);
+    } catch (error) {
+      if (draftProtected) {
+        try {
+          await this.options.afterUnprotect?.(id);
+        } catch {
+          /* 保持失败状态，禁止假报成功。 */
+        }
+      }
+      return fail(String(error));
+    }
     const result = this.execute({ type: 'page.setEncrypted', id, encrypted: true, now: Date.now() });
-    if (result.ok) await this.queue.flush();
+    if (result.ok && !(await this.queue.flush())) return fail('Current changes could not be saved.');
     return result;
   }
 
   async unprotectPage(id: PageId): Promise<Result<WorkspaceState>> {
     const result = this.execute({ type: 'page.setEncrypted', id, encrypted: false, now: Date.now() });
     if (!result.ok) return result;
-    await this.queue.flush();
+    if (!(await this.queue.flush())) return fail('Current changes could not be saved.');
     this.repository.unprotectPage?.(id);
+    await this.options.afterUnprotect?.(id);
     return result;
   }
 

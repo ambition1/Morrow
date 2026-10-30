@@ -1,3 +1,4 @@
+import { webRecovery } from '../platform/webRecovery';
 import { localizeError } from '../i18n/errors';
 import {
   AlertTriangle,
@@ -14,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
 import { ancestorsOf } from '../../core/tree';
@@ -138,12 +139,54 @@ function SplitButtons() {
 export function SaveIndicator({ editing }: { editing: boolean }) {
   const { t } = useTranslation();
   const status = useSaveStatus();
+  /** 桌面使用稳定空值，Web 显示真实本机事务状态。 */
+  const recovery = useSyncExternalStore(
+    webRecovery?.subscribe ?? (() => () => {}),
+    webRecovery?.getStatus ?? (() => null),
+  );
   const [, tick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => tick((n) => n + 1), 30_000);
     return () => clearInterval(timer);
   }, []);
 
+  if (
+    recovery?.error ||
+    status.state === 'conflict' ||
+    (status.state === 'error' && recovery?.drafts.length)
+  ) {
+    return (
+      <button
+        type="button"
+        className="save-status is-error"
+        title={recovery?.error ? t('reliability.localUnavailable') : t('reliability.conflict')}
+        aria-label={
+          recovery?.error
+            ? t('reliability.localUnavailable')
+            : status.state === 'conflict'
+              ? t('reliability.conflict')
+              : t('reliability.localSaved')
+        }
+        onClick={() => setUi({ dialog: { kind: 'recovery' } })}
+      >
+        <AlertTriangle size={14} />
+        <span className="save-label">
+          {recovery?.error
+            ? t('topBar.saveFailed')
+            : status.state === 'conflict'
+              ? t('reliability.conflict')
+              : t('reliability.localSaved')}
+        </span>
+      </button>
+    );
+  }
+  if (recovery?.drafts.length && status.state === 'saved') {
+    return (
+      <button type="button" className="save-status" onClick={() => setUi({ dialog: { kind: 'recovery' } })}>
+        {t('reliability.review')}
+      </button>
+    );
+  }
   if (status.state === 'error') {
     return (
       <button

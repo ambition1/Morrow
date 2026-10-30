@@ -28,6 +28,8 @@ import { chineseSampleCommands } from './core/sample.zh-CN';
 import { sampleCommands } from './core/sample';
 import { startRecurring } from './app/recurring';
 import { WorkspaceSession } from './storage/session';
+import { WebRecovery, setWebRecovery } from './app/platform/webRecovery';
+import { webRequest } from './app/platform/webVault';
 import { webVaultBridge } from './app/platform/webVault';
 import { applyFonts } from './app/platform/fonts';
 import { localizeError } from './app/i18n/errors';
@@ -42,7 +44,7 @@ import { desktop } from './app/platform/desktop';
 import { newId } from './app/platform/files';
 import { desktopVaultBridge } from './app/platform/vault';
 import { resolvedTheme, getPreferences } from './app/platform/preferences';
-import { toast } from './app/ui';
+import { toast, setUi } from './app/ui';
 import { setSession } from './app/workspace';
 
 type BootState =
@@ -68,14 +70,41 @@ async function openWorkspace(): Promise<BootState> {
   const vault = desktop?.vault ? await desktop.vault.open() : null;
   if (desktop?.vault && (!vault?.ok || !vault.root))
     return { kind: 'choose', legacy: await legacyPageCount().catch(() => 0) };
+  /** Web 草稿与当前桥接共享版本，桌面继续沿用原生存储。 */
+  const webBridge = desktop?.vault ? null : webVaultBridge();
+  /** 排队钩子在初始化完成后才开放给编辑器。 */
+  let recovery: WebRecovery | null = null;
   const repository =
     desktop?.vault && vault?.root
       ? new VaultRepository(desktopVaultBridge(desktop.vault, vault.root), newId)
-      : new VaultRepository(webVaultBridge(), newId);
-  const opened = await WorkspaceSession.open(repository);
+      : new VaultRepository(webBridge!, newId);
+  const opened = await WorkspaceSession.open(repository, {
+    beforeProtect: (id) => recovery?.setEncrypted(id, true) ?? Promise.resolve(),
+    afterUnprotect: (id) => recovery?.setEncrypted(id, false) ?? Promise.resolve(),
+    onEnqueue: (changes, state) => recovery?.enqueue(changes, state),
+    beforeWrite: (batch) => recovery?.beforeWrite(batch) ?? Promise.resolve([]),
+    afterWrite: (batch, token) => recovery?.afterWrite(batch, token) ?? Promise.resolve(),
+  });
   if (!opened.ok) return { kind: 'error', message: opened.error };
   const session = opened.value;
   session.beforeExternal = commitEditors;
+  if (webBridge) {
+    /** 稳定笔记库身份和浏览器来源共同隔离草稿。 */
+    const identity = (await (await webRequest('/api/vault/identity')).json()) as { id: string };
+    recovery = new WebRecovery(session.getState(), webBridge.getRevision);
+    await recovery.open(`${location.origin}/${identity.id}`);
+    setWebRecovery(recovery);
+    if (recovery.getStatus().capture)
+      toast(t('reliability.found'), {
+        durationMs: 60_000,
+        action: { label: t('dialogs.quickNote'), run: () => setUi({ dialog: { kind: 'capture' } }) },
+      });
+    if (recovery.getStatus().drafts.length)
+      toast(t('reliability.found'), {
+        durationMs: 60_000,
+        action: { label: t('reliability.review'), run: () => setUi({ dialog: { kind: 'recovery' } }) },
+      });
+  }
   const copyLegacy = sessionStorage.getItem(COPY_LEGACY_KEY) === '1';
   sessionStorage.removeItem(COPY_LEGACY_KEY);
   if (copyLegacy) {

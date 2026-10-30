@@ -408,3 +408,45 @@
 .pane[data-size='narrow'] .home-view .home-cards {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* 搜索筛选复用已有表单和选择器；窄屏自然换行，不压缩正文。 */
+.search-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  width: 100%;
+}
+.search-filters .field {
+  min-width: 0;
+}
+.search-filters .text-input {
+  width: 100%;
+  min-width: 0;
+}
+.search-result button {
+  text-align: left;
+}
+.search-result button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* 附件名可换行，移除按钮在触屏与键盘下始终可用。 */
+.capture-files {
+  padding: 0;
+  list-style: none;
+}
+.capture-files li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+.capture-files li span {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.capture-files .button {
+  flex: none;
+}

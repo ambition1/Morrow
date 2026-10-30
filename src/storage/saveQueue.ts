@@ -3,7 +3,7 @@ import type { PageId, Snapshot, WorkspaceState } from '../core/model';
 import { errorMessage } from '../core/result';
 import type { WriteBatch } from './repository';
 
-export type SaveState = 'saved' | 'pending' | 'saving' | 'error';
+export type SaveState = 'saved' | 'pending' | 'saving' | 'error' | 'conflict';
 
 export interface SaveStatus {
   state: SaveState;
@@ -14,6 +14,16 @@ export interface SaveStatus {
 
 export interface SaveQueueOptions {
   // versions to store alongside the documents being written
+  /** 排队时立即保护本机内容，不等待服务器防抖。 */
+  /** 加密前清理本机所有明文草稿，失败必须中止加密。 */
+  beforeProtect?: (pageId: PageId) => Promise<void>;
+  /** 取消加密成功后才能重新启用明文草稿。 */
+  afterUnprotect?: (pageId: PageId) => Promise<void>;
+  onEnqueue?: (changes: Changes, state: WorkspaceState) => void;
+  /** 服务器写入前确认本次正文已持久保存在本机。 */
+  beforeWrite?: (batch: WriteBatch) => Promise<unknown>;
+  /** 只清理已确认写入的同一代草稿。 */
+  afterWrite?: (batch: WriteBatch, token: unknown) => Promise<void>;
   snapshotsFor?: (docIds: PageId[], state: WorkspaceState) => Snapshot[];
   onSnapshotsWritten?: (snapshots: Snapshot[]) => void;
   delayMs?: number;
@@ -35,6 +45,23 @@ export class SaveQueue {
   private readonly now: () => number;
   private readonly options: SaveQueueOptions;
   private writing = new Set<PageId>();
+  /** 快速记录跨本机检查点时暂缓新的服务器批次。 */
+  private holds = 0;
+
+  /** 本机持久化操作完成后释放；重复释放无副作用。 */
+  hold(): () => void {
+    this.holds++;
+    this.clearTimer();
+    /** 一个持有者只能释放一次。 */
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.holds--;
+      if (this.holds === 0 && this.hasPending() && this.current.state !== 'conflict')
+        this.schedule(this.delayMs);
+    };
+  }
 
   constructor(
     private readonly writer: { write(batch: WriteBatch): Promise<void> },
@@ -66,6 +93,7 @@ export class SaveQueue {
   }
 
   enqueue(changes: Changes): void {
+    this.options.onEnqueue?.(changes, this.getState());
     for (const id of changes.pages) this.dirtyPages.add(id);
     for (const id of changes.docs) this.dirtyDocs.add(id);
     for (const id of changes.removed) {
@@ -74,6 +102,7 @@ export class SaveQueue {
       this.dirtyDocs.delete(id);
     }
     if (!this.hasPending()) return;
+    if (this.current.state === 'conflict') return;
     if (this.current.state !== 'error') this.setStatus({ ...this.current, state: 'pending' });
     this.schedule(this.current.state === 'error' ? this.retryDelay() : this.delayMs);
   }
@@ -81,7 +110,9 @@ export class SaveQueue {
   // writes everything outstanding now, resolves true when nothing is left unsaved
   async flush(): Promise<boolean> {
     this.clearTimer();
+    if (this.holds > 0) return false;
     while (this.inFlight) await this.inFlight;
+    if (this.holds > 0) return false;
     if (this.dirtyPages.size + this.dirtyDocs.size + this.removed.size > 0) {
       this.inFlight = this.writeOnce();
       await this.inFlight;
@@ -121,7 +152,10 @@ export class SaveQueue {
         batch.docs.map((record) => record.id),
         state,
       );
+      /** 本次写入令牌不能由稍后的编辑替换。 */
+      const token = this.options.beforeWrite ? await this.options.beforeWrite(batch) : undefined;
       await this.writer.write(batch);
+      await this.options.afterWrite?.(batch, token);
       if (batch.snapshots?.length) this.options.onSnapshotsWritten?.(batch.snapshots);
       this.writing.clear();
       this.inFlight = null;
@@ -142,11 +176,11 @@ export class SaveQueue {
       this.inFlight = null;
       this.setStatus({
         ...this.current,
-        state: 'error',
+        state: (error as { status?: number }).status === 409 ? 'conflict' : 'error',
         error: errorMessage(error),
         failures: this.current.failures + 1,
       });
-      this.schedule(this.retryDelay());
+      if (this.current.state !== 'conflict') this.schedule(this.retryDelay());
     }
   }
 
@@ -156,6 +190,7 @@ export class SaveQueue {
 
   private schedule(delay: number): void {
     this.clearTimer();
+    if (this.holds > 0) return;
     this.timer = setTimeout(() => {
       this.timer = null;
       void this.flush();

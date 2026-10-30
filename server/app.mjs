@@ -206,6 +206,16 @@ export async function createApp({ dataDir, distDir }) {
   /** 继续使用现有服务器笔记库目录，不迁移或重建已有数据。 */
   const root = path.join(dataRoot, 'vaults', 'local');
   await fs.mkdir(root, { recursive: true });
+  /** 稳定库身份随笔记库备份，服务重启不能使本机草稿失联。 */
+  const identityPath = await safePath(root, '.morrow/vault-id');
+  await fs.mkdir(path.dirname(identityPath), { recursive: true });
+  try {
+    await fs.writeFile(identityPath, randomBytes(24).toString('hex'), { flag: 'wx', mode: 0o600 });
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  }
+  /** 身份只用于草稿隔离，不包含服务器目录或访问凭证。 */
+  const vaultIdentity = (await fs.readFile(identityPath, 'utf8')).trim();
   /** 全库串行队列防止不同设备的文件批次互相穿插。 */
   let queue = Promise.resolve();
   /** 全库共享版本，配合启动世代拒绝陈旧客户端覆盖。 */
@@ -258,6 +268,7 @@ export async function createApp({ dataDir, distDir }) {
       return serialized(async () => {
         response.setHeader('X-Morrow-Revision', `${epoch}:${revision}`);
         if (request.method === 'GET') {
+          if (url.pathname === '/api/vault/identity') return json(response, 200, { id: vaultIdentity });
           if (url.pathname === '/api/vault/revision')
             return json(response, 200, { revision: `${epoch}:${revision}` });
           if (url.pathname === '/api/vault/scan') return json(response, 200, await scanVault(root));

@@ -22,6 +22,8 @@ export interface VaultFileInfo {
 // everything the vault storage needs from the file system, the desktop shell provides it
 export interface VaultBridge {
   readonly root: string;
+  /** Web 冲突必须交给用户处理，不能自动重放覆盖磁盘正文。 */
+  readonly strictConflicts?: boolean;
   scan(): Promise<VaultScan>;
   // runs operations in order and stops at the first one that fails, the result has one entry per attempt
   apply(ops: VaultOp[]): Promise<VaultOpResult[]>;
