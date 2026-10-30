@@ -67,7 +67,8 @@
 
 /* 设置导航与详情使用同一组图标，在紧凑密度下增加明确的分区标识。 */
 .palette-input-row:focus-within {
-  box-shadow: inset 0 0 0 2px var(--focus);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .settings-dialog {
@@ -238,10 +239,15 @@
   overflow: hidden;
 }
 
+/* 搜索区独立内缩，避免52px输入高度叠加大内边距，并让焦点框保持完整圆角。 */
 .palette-input-row {
-  gap: 12px;
-  padding: 20px;
-  background: var(--bg-sidebar);
+  flex: none;
+  gap: 10px;
+  margin: 12px 12px 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .palette-search-icon {
@@ -250,8 +256,9 @@
 
 .palette-input {
   min-width: 0;
-  font-size: var(--text-md);
-  line-height: 1.6;
+  height: 40px;
+  font-size: var(--text-ui);
+  line-height: 1.4;
 }
 
 .palette-results {
