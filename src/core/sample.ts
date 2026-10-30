@@ -995,7 +995,6 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
         ),
         h(1, 'Navigation and split panes'),
         bullets(
-          ['Use the toolbar arrows to go back and forward in the current pane.'],
           ['Alt click a page or link to open it beside the current page.'],
           ['Use the split toolbar to swap sides or close the second pane.'],
         ),

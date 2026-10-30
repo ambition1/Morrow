@@ -71,7 +71,7 @@ export function navigate(route: Route, options: { replace?: boolean; pane?: Pane
   const hash = routeHash(route);
   const pane = options.pane ?? targetPane();
   if (pane === 'side' && getNavigation().main.side) {
-    showInSide(hash, options.replace);
+    showInSide(hash);
     return;
   }
   showInMain(hash, options.replace);

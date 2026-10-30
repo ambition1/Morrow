@@ -1,5 +1,5 @@
 /**
- * 功能：单工作区及可选分栏的浏览历史、定位和焦点管理。
+ * 功能：单工作区及可选分栏的位置恢复、定位和焦点管理。
  * 作者：xuanli
  * 时间：2026-10-30 23:19:54
  */
@@ -7,19 +7,15 @@ import { createContext, useContext, useSyncExternalStore } from 'react';
 
 /** 导航区域标识。 */
 export type PaneId = 'main' | 'side';
-/** 单个区域的当前位置与前后历史。 */
-export interface PaneHistory {
+/** 单个区域的当前位置。 */
+export interface PaneLocation {
   /** 当前地址。 */
   hash: string;
-  /** 后退地址。 */
-  back: string[];
-  /** 前进地址。 */
-  forward: string[];
 }
 /** 主区域及其可选分栏。 */
-interface MainPane extends PaneHistory {
-  /** 分栏历史，未打开时为空。 */
-  side: PaneHistory | null;
+interface MainPane extends PaneLocation {
+  /** 分栏位置，未打开时为空。 */
+  side: PaneLocation | null;
 }
 /** 唯一工作区的导航状态。 */
 interface NavigationState {
@@ -30,22 +26,17 @@ interface NavigationState {
 }
 /** 独立导航存储，不恢复旧多标签列表。 */
 const KEY = 'morrow.navigation';
-/** 每侧最多保留的浏览记录数。 */
-const MAX_HISTORY = 50;
 /** 订阅导航变化的回调。 */
 const listeners = new Set<() => void>();
-/** 过滤持久化历史中的非法值。 */
-const strings = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string').slice(-MAX_HISTORY)
-    : [];
-/** 读取单侧有效导航历史。 */
-function readPane(raw: unknown): PaneHistory | null {
+/** 读取单侧有效导航位置。 */
+function readPane(raw: unknown): PaneLocation | null {
   /** 待校验的持久化记录。 */
-  const value = raw as Partial<PaneHistory> | null;
+  const value = raw as Partial<PaneLocation> | null;
   if (typeof value?.hash !== 'string') return null;
-  return { hash: value.hash, back: strings(value.back), forward: strings(value.forward) };
+  return { hash: value.hash };
 }
+/** 启动时可恢复的上次主区域地址。 */
+let lastLocation: string | null = null;
 /** 以当前 URL 为准恢复工作区，不触碰笔记数据。 */
 function load(): NavigationState {
   /** 当前浏览器地址。 */
@@ -53,18 +44,18 @@ function load(): NavigationState {
   try {
     /** 已保存的工作区。 */
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<NavigationState> | null;
-    /** 主区域历史。 */
+    /** 主区域位置。 */
     const saved = readPane(raw?.main);
     if (saved) {
-      /** 可选分栏历史。 */
+      lastLocation = saved.hash;
+      /** 可选分栏位置。 */
       const side = readPane(raw?.main?.side);
-      if (saved.hash !== here) saved.back = [...saved.back, saved.hash].slice(-MAX_HISTORY);
       return { main: { ...saved, hash: here, side }, pane: raw?.pane === 'side' && side ? 'side' : 'main' };
     }
   } catch {
     // 导航记录不可用时从当前地址重新开始。
   }
-  return { main: { hash: here, back: [], forward: [], side: null }, pane: 'main' };
+  return { main: { hash: here, side: null }, pane: 'main' };
 }
 /** 内存导航快照。 */
 let state: NavigationState | null = null;
@@ -86,24 +77,13 @@ function updateMain(change: (main: MainPane) => MainPane, extra: Partial<Navigat
   const now = current();
   set({ ...now, ...extra, main: change(now.main) });
 }
-/** 历史跳转即将到达的 URL，避免再次添加浏览记录。 */
-let arriving: string | null = null;
-
-/** 更新浏览器地址并标记历史跳转。 */
-function go(hash: string): void {
-  if (window.location.hash === hash || (hash === '#/' && !window.location.hash)) return;
-  arriving = hash;
-  window.location.hash = hash;
+/** 根据启动偏好恢复上次位置，不依赖前后位置。 */
+export function restoreLastLocation(): void {
+  current();
+  if (lastLocation) showInMain(lastLocation, true);
 }
 
-/** 生成一次浏览或替换后的区域历史。 */
-function visit(pane: PaneHistory, hash: string, replace: boolean): PaneHistory {
-  if (pane.hash === hash) return pane;
-  if (replace) return { ...pane, hash };
-  return { hash, back: [...pane.back, pane.hash].slice(-MAX_HISTORY), forward: [] };
-}
-
-/** 监听地址变化、鼠标历史键和 Alt 点击分栏。 */
+/** 监听地址变化和 Alt 点击分栏。 */
 export function startNavigation(): () => void {
   current();
   /** 同步浏览器地址变化。 */
@@ -112,22 +92,10 @@ export function startNavigation(): () => void {
     const hash = window.location.hash || '#/';
     /** 当前主区域快照。 */
     const mainPane = current().main;
-    /** 是否由已有历史跳转触发。 */
-    const expected = arriving === hash;
-    arriving = null;
-    if (mainPane.hash === hash) return;
-    updateMain((item) => (expected ? { ...item, hash } : { ...item, ...visit(item, hash, false) }));
+    if (mainPane.hash !== hash) updateMain((item) => ({ ...item, hash }));
   };
-  /** 处理鼠标历史键与分栏手势。 */
+  /** 处理分栏手势。 */
   const onClick = (event: MouseEvent) => {
-    if (event.type === 'auxclick' && (event.button === 3 || event.button === 4)) {
-      event.preventDefault();
-      /** 事件目标所属区域。 */
-      const pane = paneAt(event.target);
-      if (event.button === 3) goBack(pane);
-      else goForward(pane);
-      return;
-    }
     /** 是否请求在分栏中打开页面。 */
     const toSide =
       event.type === 'click' && event.button === 0 && event.altKey && !event.ctrlKey && !event.metaKey;
@@ -145,19 +113,10 @@ export function startNavigation(): () => void {
   };
   window.addEventListener('hashchange', onHash);
   window.addEventListener('click', onClick, true);
-  window.addEventListener('auxclick', onClick, true);
   return () => {
     window.removeEventListener('hashchange', onHash);
     window.removeEventListener('click', onClick, true);
-    window.removeEventListener('auxclick', onClick, true);
   };
-}
-
-/** 根据事件目标确定导航区域。 */
-function paneAt(target: EventTarget | null): PaneId {
-  /** 最近的区域容器。 */
-  const element = target instanceof Element ? target.closest<HTMLElement>('[data-pane]') : null;
-  return element?.dataset.pane === 'side' ? 'side' : element ? 'main' : current().pane;
 }
 
 /** 读取当前接收导航的区域。 */
@@ -196,16 +155,16 @@ export function showInMain(hash: string, replace = false): void {
 }
 
 /** 打开分栏地址，保持主区域不变。 */
-export function showInSide(hash: string, replace = false): void {
+export function showInSide(hash: string): void {
   /** 当前主区域快照。 */
   const mainPane = current().main;
   if (!mainPane.side) return;
-  updateMain((item) => ({ ...item, side: visit(item.side!, hash, replace) }));
+  updateMain((item) => ({ ...item, side: { hash } }));
 }
 
 /** 打开分栏并将导航焦点移到分栏。 */
 export function openSide(hash = activeHash()): void {
-  updateMain((item) => ({ ...item, side: { hash, back: [], forward: [] } }), { pane: 'side' });
+  updateMain((item) => ({ ...item, side: { hash } }), { pane: 'side' });
 }
 
 /** 关闭分栏并回到主区域。 */
@@ -214,61 +173,17 @@ export function closeSide(): void {
   updateMain((item) => ({ ...item, side: null }), { pane: 'main' });
 }
 
-/** 交换两侧内容及各自浏览历史。 */
+/** 交换两侧内容及各自浏览位置。 */
 export function swapSides(): void {
   /** 当前主区域快照。 */
   const mainPane = current().main;
   if (!mainPane.side) return;
-  /** 待交换的主区域历史。 */
-  const main: PaneHistory = { hash: mainPane.hash, back: mainPane.back, forward: mainPane.forward };
-  /** 待交换的分栏历史。 */
+  /** 待交换的主区域位置。 */
+  const main: PaneLocation = { hash: mainPane.hash };
+  /** 待交换的分栏位置。 */
   const side = mainPane.side;
   updateMain((item) => ({ ...item, ...side, side: main }));
-  go(side.hash);
-}
-
-/** 获取指定区域的历史。 */
-function paneOf(mainPane: MainPane, pane: PaneId): PaneHistory | null {
-  return pane === 'side' ? mainPane.side : mainPane;
-}
-
-/** 检查指定区域能否前进或后退。 */
-export function canGo(mainPane: MainPane, pane: PaneId, direction: 'back' | 'forward'): boolean {
-  return (paneOf(mainPane, pane)?.[direction].length ?? 0) > 0;
-}
-
-/** 执行指定方向的历史跳转。 */
-function step(pane: PaneId, direction: 'back' | 'forward'): void {
-  /** 当前主区域快照。 */
-  const mainPane = current().main;
-  /** 当前区域的浏览历史。 */
-  const history = paneOf(mainPane, pane);
-  if (!history || history[direction].length === 0) return;
-  /** 待访问方向的历史副本。 */
-  const list = [...history[direction]];
-  /** 目标地址。 */
-  const hash = list.pop()!;
-  /** 另一方向补入当前位置后的历史。 */
-  const left = [...(direction === 'back' ? history.forward : history.back), history.hash].slice(-MAX_HISTORY);
-  /** 跳转后的完整区域历史。 */
-  const moved: PaneHistory =
-    direction === 'back' ? { hash, back: list, forward: left } : { hash, back: left, forward: list };
-  if (pane === 'side') {
-    updateMain((item) => ({ ...item, side: moved }), { pane: 'side' });
-    return;
-  }
-  updateMain((item) => ({ ...item, ...moved }), { pane: 'main' });
-  go(hash);
-}
-
-/** 后退到上一次浏览位置。 */
-export function goBack(pane: PaneId = targetPane()): void {
-  step(pane, 'back');
-}
-
-/** 前进到下一次浏览位置。 */
-export function goForward(pane: PaneId = targetPane()): void {
-  step(pane, 'forward');
+  showInMain(side.hash, true);
 }
 
 /** 订阅单工作区导航快照。 */

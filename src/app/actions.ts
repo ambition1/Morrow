@@ -1,7 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowRightLeft,
   Columns2,
   PanelRightClose,
@@ -54,7 +52,7 @@ import {
   trashPage,
 } from './operations';
 import { desktop, isMac } from './platform/desktop';
-import { closeSide, getNavigation, goBack, goForward, openSide, swapSides } from './navigation';
+import { closeSide, getNavigation, openSide, swapSides } from './navigation';
 import { chooseVaultFolder } from './vaults';
 import { getPreferences, resolvedTheme, setPreferences } from './platform/preferences';
 import { activeRoute, navigate } from './router';
@@ -76,12 +74,6 @@ export interface Action {
   run: (context: ActionContext) => void;
 }
 
-// shortcuts shown on buttons as well as run from the keyboard
-export const ACTION_SHORTCUTS = {
-  back: isMac ? 'Mod+[' : 'Alt+ArrowLeft',
-  forward: isMac ? 'Mod+]' : 'Alt+ArrowRight',
-};
-
 const hasSplit = () => {
   return Boolean(getNavigation().main.side);
 };
@@ -90,24 +82,6 @@ const onLivePage = ({ pageId }: ActionContext) =>
   pageId !== null && !isEffectivelyTrashed(getState().pages, pageId);
 
 export const ACTIONS: Action[] = [
-  {
-    id: 'go.back',
-    label: 'Go back',
-    group: 'View',
-    icon: ArrowLeft,
-    shortcut: ACTION_SHORTCUTS.back,
-    keywords: 'previous history navigate',
-    run: () => goBack(),
-  },
-  {
-    id: 'go.forward',
-    label: 'Go forward',
-    group: 'View',
-    icon: ArrowRight,
-    shortcut: ACTION_SHORTCUTS.forward,
-    keywords: 'next history navigate',
-    run: () => goForward(),
-  },
   {
     id: 'view.split',
     label: 'Open beside, in a split',

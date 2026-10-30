@@ -94,9 +94,8 @@ https://github.com/user-attachments/assets/a279710f-1a50-4f1a-82ff-17714cfe7641
   day" and a page to rediscover
 - **Publish** a page or the whole vault as a static website, free
 - Page history with a view of what changed since each version
-- **Single workspace and split panes**: back and forward in each pane (Alt + ←
-  and →, Cmd + [ and ] on a Mac, or the mouse's side buttons). Alt + click opens
-  a page beside the current page. The content toolbar sits at the top without a tab strip.
+- **Single workspace and split panes**: Alt + click opens a page beside the current
+  page. A compact toolbar shows the page path directly above the content.
 - **Drag a page** from the sidebar into another page to link it
 - **An optional assistant** that searches, reads and edits your pages in Morrow's
   own Markdown, with Claude, ChatGPT, Gemini, OpenRouter or a local model through

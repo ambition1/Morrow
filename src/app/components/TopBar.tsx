@@ -2,8 +2,6 @@ import { webRecovery } from '../platform/webRecovery';
 import { localizeError } from '../i18n/errors';
 import {
   AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
   ArrowRightLeft,
   Check,
   Columns2,
@@ -19,20 +17,11 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
 import { ancestorsOf } from '../../core/tree';
-import { ACTION_SHORTCUTS, formatShortcut, runAction } from '../actions';
+import { formatShortcut, runAction } from '../actions';
 import { toggleFavorite } from '../operations';
 import { usePreferences } from '../platform/preferences';
 import { openPage } from '../router';
-import {
-  canGo,
-  closeSide,
-  goBack,
-  goForward,
-  openSide,
-  swapSides,
-  usePane,
-  useNavigation,
-} from '../navigation';
+import { closeSide, openSide, swapSides, usePane, useNavigation } from '../navigation';
 import { setUi } from '../ui';
 import { getSession, useSaveStatus, useWorkspace } from '../workspace';
 import { Menu } from './Menu';
@@ -65,39 +54,6 @@ export function SidebarToggle() {
         </button>
       )}
     </>
-  );
-}
-
-// back and forward for the side of the window this bar belongs to
-function HistoryButtons() {
-  const { t } = useTranslation();
-  const pane = usePane();
-  const { main } = useNavigation();
-  const back = canGo(main, pane, 'back');
-  const forward = canGo(main, pane, 'forward');
-  return (
-    <span className="history-buttons">
-      <button
-        type="button"
-        className="icon-button"
-        aria-label={t('topBar.goBack')}
-        title={t('topBar.back', { shortcut: formatShortcut(ACTION_SHORTCUTS.back) })}
-        disabled={!back}
-        onClick={() => goBack(pane)}
-      >
-        <ArrowLeft size={16} strokeWidth={1.75} />
-      </button>
-      <button
-        type="button"
-        className="icon-button"
-        aria-label={t('topBar.goForward')}
-        title={t('topBar.forward', { shortcut: formatShortcut(ACTION_SHORTCUTS.forward) })}
-        disabled={!forward}
-        onClick={() => goForward(pane)}
-      >
-        <ArrowRight size={16} strokeWidth={1.75} />
-      </button>
-    </span>
   );
 }
 
@@ -247,10 +203,7 @@ export function TopBar({
 
   return (
     <header className="topbar">
-      <div className="topbar-nav">
-        {pane === 'main' && <SidebarToggle />}
-        <HistoryButtons />
-      </div>
+      <div className="topbar-nav">{pane === 'main' && <SidebarToggle />}</div>
       <div className="topbar-center">
         {page ? (
           <nav className="breadcrumbs" aria-label={t('topBar.breadcrumb')}>

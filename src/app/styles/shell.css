@@ -224,8 +224,7 @@
     padding-inline: 8px;
   }
 
-  .topbar :is(.topbar-nav, .topbar-actions) > .icon-button,
-  .topbar .history-buttons .icon-button {
+  .topbar :is(.topbar-nav, .topbar-actions) > .icon-button {
     min-width: 40px;
     min-height: 40px;
   }

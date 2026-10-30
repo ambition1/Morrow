@@ -24,7 +24,13 @@ import { navigate, parseRoute, routeHash, useRoute } from './router';
 import type { Route } from './router';
 import { getUi, setUi, toast, useUi } from './ui';
 import { loadCustomCss } from './customCss';
-import { goBack, PaneContext, setActivePane, startNavigation, useNavigation } from './navigation';
+import {
+  restoreLastLocation,
+  PaneContext,
+  setActivePane,
+  startNavigation,
+  useNavigation,
+} from './navigation';
 import type { PaneId } from './navigation';
 import { getSession } from './workspace';
 
@@ -284,7 +290,7 @@ function useStartPage() {
     // a window opened at a particular place, or a brand new vault showing its guide, stays as it is
     if ((window.location.hash && window.location.hash !== '#/') || getSession().firstRun) return;
     const start = getPreferences().startPage;
-    if (start === 'last') goBack('main');
+    if (start === 'last') restoreLastLocation();
     else if (start === 'today') {
       const id = ensureToday();
       if (id) navigate({ name: 'page', id, find: null }, { replace: true, pane: 'main' });

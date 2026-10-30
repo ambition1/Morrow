@@ -1,5 +1,5 @@
 /**
- * 功能：验证单工作区导航与分栏历史，防止移除标签页后出现导航回归。
+ * 功能：验证单工作区导航与分栏位置，防止移除标签页后出现导航回归。
  * 作者：xuanli
  * 时间：2026-10-30 23:21:00
  */
@@ -47,47 +47,35 @@ describe('单工作区导航', () => {
     browser.location.hash = '#/page/current';
     stop = navigation.startNavigation();
     expect(navigation.getNavigation()).toEqual({
-      main: { hash: '#/page/current', back: [], forward: [], side: null },
+      main: { hash: '#/page/current', side: null },
       pane: 'main',
     });
   });
-  it('主区域保留前后历史，后退后新导航清除前进记录', () => {
+  it('导航只保存当前位置，不累计前后历史', () => {
     stop = navigation.startNavigation();
     navigation.showInMain('#/tasks');
     settleHash();
     navigation.showInMain('#/tags');
     settleHash();
-    navigation.goBack();
-    settleHash();
-    expect(browser.location.hash).toBe('#/tasks');
-    expect(navigation.canGo(navigation.getNavigation().main, 'main', 'forward')).toBe(true);
-    navigation.goForward();
-    settleHash();
-    expect(browser.location.hash).toBe('#/tags');
-    navigation.goBack();
-    settleHash();
-    navigation.showInMain('#/graph');
-    settleHash();
-    expect(navigation.getNavigation().main.forward).toEqual([]);
+    expect(navigation.getNavigation().main).toEqual({ hash: '#/tags', side: null });
   });
-  it('替换地址不添加历史，分栏独立浏览且可交换和关闭', () => {
+  it('替换地址同步主区域，分栏独立浏览且可交换和关闭', () => {
     stop = navigation.startNavigation();
     navigation.showInMain('#/page/main', true);
-    expect(navigation.getNavigation().main.back).toEqual([]);
+    expect(navigation.getNavigation().main.hash).toBe('#/page/main');
     navigation.openSide('#/page/side');
     navigation.showInSide('#/tasks');
-    navigation.goBack('side');
-    expect(navigation.activeHash()).toBe('#/page/side');
+    expect(navigation.activeHash()).toBe('#/tasks');
     expect(browser.location.hash).toBe('#/page/main');
     navigation.swapSides();
     settleHash();
-    expect(browser.location.hash).toBe('#/page/side');
+    expect(browser.location.hash).toBe('#/tasks');
     expect(navigation.getNavigation().main.side?.hash).toBe('#/page/main');
     navigation.closeSide();
     expect(navigation.targetPane()).toBe('main');
     expect(navigation.getNavigation().main.side).toBeNull();
   });
-  it('刷新恢复导航历史及分栏，不恢复多标签列表', async () => {
+  it('刷新恢复导航位置及分栏，不恢复多标签列表', async () => {
     stop = navigation.startNavigation();
     navigation.showInMain('#/tasks');
     settleHash();
@@ -96,8 +84,18 @@ describe('单工作区导航', () => {
     vi.resetModules();
     navigation = await import('./navigation');
     stop = navigation.startNavigation();
-    expect(navigation.getNavigation().main.back).toEqual(['#/']);
+    expect(navigation.getNavigation().main.hash).toBe('#/tasks');
     expect(navigation.activeHash()).toBe('#/page/side');
     expect(navigation.getNavigation()).not.toHaveProperty('tabs');
+  });
+  it('上次位置启动偏好不依赖浏览历史', () => {
+    storage.set(
+      'morrow.navigation',
+      JSON.stringify({ main: { hash: '#/page/last', back: ['#/old'], side: null }, pane: 'main' }),
+    );
+    stop = navigation.startNavigation();
+    navigation.restoreLastLocation();
+    expect(browser.location.hash).toBe('#/page/last');
+    expect(navigation.getNavigation().main).toEqual({ hash: '#/page/last', side: null });
   });
 });
