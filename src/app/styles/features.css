@@ -2539,3 +2539,52 @@ td:hover .prop-empty,
   line-height: 1.45;
   overflow-x: auto;
 }
+
+/* 笔记版本记录复用对话框、输入框和历史预览，窄屏不挤压操作。 */
+.history-controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.history-save-row,
+.history-version-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.history-save-row .text-input,
+.history-version-tools .text-input {
+  flex: 1;
+  min-width: 140px;
+}
+.history-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.history-version-tools {
+  margin-bottom: 12px;
+}
+.history-item strong {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.history-actions {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .history-save-row .text-input,
+  .history-version-tools .text-input {
+    width: 100%;
+    flex-basis: 100%;
+    font-size: 16px;
+  }
+}
+/* 历史正文预览使用实色阅读表面，玻璃只留在弹层外壳。 */
+.history-dialog .history-preview {
+  background: var(--surface);
+}

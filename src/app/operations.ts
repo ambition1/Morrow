@@ -744,7 +744,7 @@ export async function restoreVersion(snapshot: Snapshot): Promise<boolean> {
   commitEditors();
   const result = await getSession().restoreSnapshot(snapshot);
   if (!result.ok) {
-    toast(result.error, { tone: 'error' });
+    toast(t('history.restoreFailed'), { tone: 'error' });
     return false;
   }
   toast(t('toasts.versionRestored'));

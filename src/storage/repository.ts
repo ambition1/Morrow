@@ -13,6 +13,8 @@ export interface WriteBatch {
   docs: Array<{ id: PageId; doc: DocNode }>;
   removed: PageId[];
   snapshots?: Snapshot[];
+  /** 元数据修改所基于的原始快照，防止同一版本被陈旧界面覆盖。 */
+  snapshotBases?: Snapshot[];
   // the whole workspace at the time of the write, file based storage lays out pages from it
   state?: WorkspaceState;
 }
@@ -134,6 +136,15 @@ class IndexedDbRepository implements WorkspaceRepository {
     const docs = tx.objectStore('docs');
     const history = tx.objectStore('history');
     const byPage = history.index('pageId');
+    // 在同一事务内验证版本基准，失败不能修改任何记录。
+    for (const base of batch.snapshotBases ?? []) {
+      const stored = await history.get(base.id);
+      if (JSON.stringify(stored) !== JSON.stringify(base)) {
+        tx.abort();
+        await tx.done.catch(() => {});
+        throw new Error('This version changed elsewhere. Reload versions before editing.');
+      }
+    }
     const requests: Array<Promise<unknown>> = [];
     for (const page of batch.pages) requests.push(pages.put(page));
     for (const record of batch.docs) requests.push(docs.put(record));

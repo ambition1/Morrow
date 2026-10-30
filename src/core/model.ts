@@ -267,6 +267,12 @@ export interface FileMeta {
 }
 
 export interface Snapshot {
+  /** 用户命名的版本，旧历史可省略。 */
+  name?: string;
+  /** 保留版本不参与普通版本数量清理。 */
+  pinned?: boolean;
+  /** 缺省为自动记录，兼容已有历史文件。 */
+  source?: 'auto' | 'manual' | 'restore' | 'assistant';
   id: string;
   pageId: PageId;
   title: string;

@@ -3,7 +3,7 @@ import { canvasDoc, canvasFromDoc, readCanvas, writeCanvas } from '../core/canva
 import { decryptPage, encryptPage, isEncryptedText, newPageKey } from '../core/crypto';
 import type { PageKey } from '../core/crypto';
 import { isDocEmpty, validateDoc, walk } from '../core/doc';
-import { snapshotsToPrune } from '../core/history';
+import { snapshotInfo, snapshotsToPrune } from '../core/history';
 import { parseWikiLink } from '../core/markdown/parse';
 import { docToMarkdown } from '../core/markdown/serialize';
 import { markdownToDoc } from '../core/markdown/parse';
@@ -97,7 +97,6 @@ export class VaultRepository implements WorkspaceRepository {
   // saves per day, for the activity chart on the home page
   private readonly days = new Map<string, number>();
   private registryDirty = false;
-  private readonly history = new Map<PageId, Snapshot[]>();
   private readonly listeners = new Set<(patch: ExternalPatch) => PageId[]>();
   private stopWatching: (() => void) | null = null;
   private currentState: () => WorkspaceState | null = () => null;
@@ -258,12 +257,7 @@ export class VaultRepository implements WorkspaceRepository {
     }
     // turning encryption on removes the plain versions kept in page history
     for (const id of metaChanged) {
-      if (
-        state.pages[id]?.encrypted &&
-        this.layout.has(id) &&
-        !this.history.get(id)?.length &&
-        !this.historyCleared.has(id)
-      ) {
+      if (state.pages[id]?.encrypted && this.layout.has(id) && !this.historyCleared.has(id)) {
         ops.push({ op: 'delete', path: this.historyPath(id) });
         this.historyCleared.add(id);
       }
@@ -281,7 +275,15 @@ export class VaultRepository implements WorkspaceRepository {
       if (parentFolder && parentFolder !== TRASH_DIR) emptied.add(parentFolder);
     }
 
-    for (const snapshot of batch.snapshots ?? []) ops.push(await this.historyOp(snapshot));
+    // 同一页面的一批快照只生成一次写入，先组装完成再执行，不建立拟保存缓存。
+    for (const pageId of new Set((batch.snapshots ?? []).map((snapshot) => snapshot.pageId))) {
+      ops.push(
+        await this.historyOp(
+          (batch.snapshots ?? []).filter((snapshot) => snapshot.pageId === pageId),
+          batch.snapshotBases,
+        ),
+      );
+    }
 
     const edited = batch.docs.length;
     if (edited > 0) {
@@ -524,13 +526,17 @@ export class VaultRepository implements WorkspaceRepository {
     return `${HISTORY_DIR}/${pageId}.json`;
   }
 
-  private async historyOf(pageId: PageId): Promise<Snapshot[]> {
-    const cached = this.history.get(pageId);
-    if (cached) return cached;
+  /** 每次读取磁盘原文，版本更新可能来自另一设备或应用实例。 */
+  private async readHistory(pageId: PageId): Promise<{ snapshots: Snapshot[]; text: string | null }> {
+    const text = await this.bridge.readText(this.historyPath(pageId));
     let list: Snapshot[];
     try {
-      const text = await this.bridge.readText(this.historyPath(pageId));
       const raw: unknown = text ? JSON.parse(text) : null;
+      if (
+        text !== null &&
+        (!raw || typeof raw !== 'object' || !Array.isArray((raw as { snapshots?: unknown }).snapshots))
+      )
+        throw new Error('Invalid history file. The original file was kept.');
       const items =
         raw && typeof raw === 'object' && Array.isArray((raw as { snapshots?: unknown }).snapshots)
           ? (raw as { snapshots: unknown[] }).snapshots
@@ -539,9 +545,16 @@ export class VaultRepository implements WorkspaceRepository {
         if (!item || typeof item !== 'object') return [];
         const snapshot = item as Partial<Snapshot>;
         const doc = validateDoc(snapshot.doc);
-        if (typeof snapshot.id !== 'string' || typeof snapshot.createdAt !== 'number' || !doc.ok) return [];
+        if (
+          typeof snapshot.id !== 'string' ||
+          typeof snapshot.createdAt !== 'number' ||
+          !Number.isFinite(snapshot.createdAt) ||
+          !doc.ok
+        )
+          return [];
         return [
           {
+            ...snapshotInfo(snapshot),
             id: snapshot.id,
             pageId,
             title: String(snapshot.title ?? ''),
@@ -550,11 +563,15 @@ export class VaultRepository implements WorkspaceRepository {
           },
         ];
       });
-    } catch {
-      list = [];
+    } catch (error) {
+      // 读取失败不能伪装成空历史，否则后续保存会覆盖原文件。
+      throw new Error(`Could not read page history: ${String(error)}`, { cause: error });
     }
-    this.history.set(pageId, list);
-    return list;
+    return { snapshots: list, text };
+  }
+
+  private async historyOf(pageId: PageId): Promise<Snapshot[]> {
+    return (await this.readHistory(pageId)).snapshots;
   }
 
   // the page is locked again, its key and plain text leave memory
@@ -567,7 +584,6 @@ export class VaultRepository implements WorkspaceRepository {
   // a new password for a page, its next save is encrypted
   async protectPage(id: PageId, password: string): Promise<void> {
     this.keys.set(id, await newPageKey(password));
-    this.history.set(id, []);
     this.historyCleared.delete(id);
   }
 
@@ -597,13 +613,25 @@ export class VaultRepository implements WorkspaceRepository {
     return ok({ page: { ...read.page, encrypted: true }, doc: read.doc });
   }
 
-  private async historyOp(snapshot: Snapshot): Promise<VaultOp> {
-    const list = [...(await this.historyOf(snapshot.pageId)), snapshot];
+  /** 纯计算历史写入操作，成功前不发布缓存；磁盘原文作为CAS基准。 */
+  private async historyOp(updates: Snapshot[], bases: Snapshot[] = []): Promise<VaultOp> {
+    /** 一批操作已经按页面分组。 */
+    const pageId = updates[0]!.pageId;
+    /** 新版本按ID合并，不覆盖其他设备追加的版本。 */
+    const current = await this.readHistory(pageId);
+    for (const base of bases.filter((item) => item.pageId === pageId)) {
+      if (JSON.stringify(current.snapshots.find((item) => item.id === base.id)) !== JSON.stringify(base))
+        throw new Error('This version changed elsewhere. Reload versions before editing.');
+    }
+    /** 保留最新磁盘记录，元数据修改仅替换已通过基准校验的版本。 */
+    const merged = new Map(current.snapshots.map((item) => [item.id, item]));
+    for (const snapshot of updates) merged.set(snapshot.id, snapshot);
+    /** 保留标记不参与普通版本配额。 */
+    const list = [...merged.values()];
     const prune = new Set(snapshotsToPrune(list));
     const kept = list.filter((item) => !prune.has(item.id)).sort((a, b) => a.createdAt - b.createdAt);
-    this.history.set(snapshot.pageId, kept);
     const text = JSON.stringify({ version: 1, snapshots: kept.map(({ pageId: _pageId, ...rest }) => rest) });
-    return { op: 'write', path: this.historyPath(snapshot.pageId), text };
+    return { op: 'write', path: this.historyPath(pageId), text, expect: current.text };
   }
 
   private async keepDiskVersion(pageId: PageId, text: string): Promise<void> {
@@ -619,8 +647,11 @@ export class VaultRepository implements WorkspaceRepository {
       doc,
       createdAt: Date.now(),
     };
-    const op = await this.historyOp(snapshot);
-    await this.bridge.apply([op]);
+    const op = await this.historyOp([snapshot]);
+    const results = await this.bridge.apply([op]);
+    if (results.length !== 1) throw new Error('History write was not confirmed.');
+    const failed = results.find((result) => !result.ok);
+    if (failed && !failed.ok) throw new Error(failed.message);
   }
 
   async listSnapshots(pageId: PageId): Promise<Snapshot[]> {

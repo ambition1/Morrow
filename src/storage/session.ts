@@ -274,15 +274,29 @@ export class WorkspaceSession {
   // the current content is kept as a version first, so restoring can always be undone
   async restoreSnapshot(snapshot: Snapshot): Promise<Result<WorkspaceState>> {
     if (!this.state.pages[snapshot.pageId]) return fail('That page no longer exists.');
-    await this.queue.flush();
+    if (this.state.pages[snapshot.pageId]?.encrypted)
+      return fail('Encrypted pages cannot keep plain history.');
+    if (!(await this.queue.flush())) return fail('Current changes could not be saved.');
     try {
-      const current = this.snapshotOf(snapshot.pageId, this.state, Date.now());
+      const current = {
+        ...this.snapshotOf(snapshot.pageId, this.state, Date.now()),
+        source: 'restore' as const,
+        pinned: true,
+      };
       await this.repository.write({ pages: [], docs: [], removed: [], snapshots: [current] });
       this.lastSnapshot.set(snapshot.pageId, current.createdAt);
     } catch (error) {
       return fail(`The current version could not be kept, so nothing was restored: ${String(error)}`);
     }
-    return this.execute({ type: 'page.setDoc', id: snapshot.pageId, doc: snapshot.doc, now: Date.now() });
+    const result = this.execute({
+      type: 'page.setDoc',
+      id: snapshot.pageId,
+      doc: snapshot.doc,
+      now: Date.now(),
+    });
+    if (result.ok && !(await this.queue.flush()))
+      return fail('The restored content remains unsaved. Retry saving before closing.');
+    return result;
   }
 
   // the page as it is now is kept in its history, before the assistant changes it for you
@@ -293,6 +307,57 @@ export class WorkspaceSession {
     const current = this.snapshotOf(pageId, this.state, Date.now());
     await this.repository.write({ pages: [], docs: [], removed: [], snapshots: [current] });
     this.lastSnapshot.set(pageId, current.createdAt);
+  }
+
+  /** 手动保存当前正文，默认保留，不会被普通历史数量清理。 */
+  async saveVersion(pageId: PageId, name = ''): Promise<Snapshot> {
+    if (
+      !this.state.docs[pageId] ||
+      this.state.pages[pageId]?.trashedAt !== null ||
+      this.state.pages[pageId]?.encrypted
+    )
+      throw new Error('This page cannot keep a manual version.');
+    if (!(await this.queue.flush())) throw new Error('Current changes could not be saved.');
+    /** 快照只在当前正文确认保存成功之后创建。 */
+    const snapshot: Snapshot = {
+      ...this.snapshotOf(pageId, this.state, Date.now()),
+      source: 'manual',
+      pinned: true,
+      ...(name.trim() ? { name: name.trim().slice(0, 120) } : {}),
+    };
+    await this.repository.write({
+      pages: [],
+      docs: [],
+      removed: [],
+      snapshots: [snapshot],
+      state: this.state,
+    });
+    this.lastSnapshot.set(pageId, snapshot.createdAt);
+    return snapshot;
+  }
+
+  /** 修改版本名称或保留标记时复用原ID，不复制正文或附件。 */
+  async updateVersion(pageId: PageId, id: string, patch: { name?: string; pinned?: boolean }): Promise<void> {
+    if (!this.state.pages[pageId] || this.state.pages[pageId]?.encrypted)
+      throw new Error('This page cannot edit history.');
+    if (!(await this.queue.flush())) throw new Error('Current changes could not be saved.');
+    /** 使用存储中的原始版本，调用者不能替换正文、页面ID或时间。 */
+    const snapshot = (await this.repository.listSnapshots(pageId)).find((item) => item.id === id);
+    if (!snapshot) throw new Error('This version no longer exists.');
+    /** 未指定的字段保持原样；名称为空表示恢复默认时间标题。 */
+    const updated: Snapshot = {
+      ...snapshot,
+      ...(patch.name !== undefined ? { name: patch.name.trim().slice(0, 120) || undefined } : {}),
+      ...(patch.pinned !== undefined ? { pinned: patch.pinned } : {}),
+    };
+    await this.repository.write({
+      pages: [],
+      docs: [],
+      removed: [],
+      snapshots: [updated],
+      snapshotBases: [snapshot],
+      state: this.state,
+    });
   }
 
   private snapshotOf(pageId: PageId, state: WorkspaceState, now: number): Snapshot {
