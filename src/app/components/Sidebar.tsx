@@ -55,7 +55,7 @@ import { run, useWorkspace } from '../workspace';
 import { Menu } from './Menu';
 import { pageMenuEntries } from './pageMenu';
 import { Emoji } from './Emoji';
-import { Logo } from './primitives';
+import { Dialog, Logo } from './primitives';
 import { PAGE_DRAG_TYPE } from '../editor/PageLink';
 
 type DropZone = 'before' | 'inside' | 'after';
@@ -112,6 +112,7 @@ function NavItem({
   onClick,
   hint,
   count,
+  expanded,
 }: {
   icon: LucideIcon;
   label: string;
@@ -119,12 +120,16 @@ function NavItem({
   onClick: () => void;
   hint?: string;
   count?: number;
+  /** 抽屉入口暴露展开状态，普通导航不设置此属性。 */
+  expanded?: boolean;
 }) {
   return (
     <button
       type="button"
       className={`nav-item${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
+      aria-haspopup={expanded === undefined ? undefined : 'dialog'}
+      aria-expanded={expanded}
       onClick={onClick}
     >
       <Icon size={16} strokeWidth={1.75} />
@@ -137,6 +142,8 @@ function NavItem({
 
 export function Sidebar() {
   const { t } = useTranslation();
+  /** 搜索快捷键打开命令面板时，需要收起当前抽屉以避免两个焦点陷阱叠加。 */
+  const ui = useUi();
   const state = useWorkspace();
   const route = useActiveRoute();
   const prefs = usePreferences();
@@ -149,6 +156,14 @@ export function Sidebar() {
   const trashCount = useMemo(() => trashedPages(state.pages).length, [state.pages]);
   const openTasks = useMemo(() => collectTasks(state).filter((task) => !task.checked).length, [state]);
   const tagCount = useMemo(() => collectTags(state).length, [state]);
+  /** 次要导航统一放入更多功能抽屉。 */
+  const [moreOpen, setMoreOpen] = useState(false);
+  // 快捷键可从抽屉中直接打开搜索，命令面板接管焦点。
+  if (moreOpen && (ui.palette || ui.dialog)) setMoreOpen(false);
+  /** 当前位于次要功能时，抽屉入口仍提示所在区域。 */
+  const moreActive =
+    ['search', 'tags', 'tag', 'graph'].includes(route.name) ||
+    !!(prefs.assistant && prefs.assistantOpen && desktop?.assistant);
   const [newMenu, setNewMenu] = useState<HTMLElement | null>(null);
   const [vaultMenu, setVaultMenu] = useState<{
     anchor: HTMLElement;
@@ -177,6 +192,7 @@ export function Sidebar() {
   };
 
   const go = (fn: () => void) => () => {
+    setMoreOpen(false);
     fn();
     setUi({ mobileSidebar: false });
   };
@@ -227,22 +243,16 @@ export function Sidebar() {
 
       <nav className="sidebar-nav" aria-label={t('sidebar.main')}>
         <NavItem
-          icon={Search}
-          label={t('common.search')}
-          hint={formatShortcut('Mod+K')}
-          onClick={() => setUi({ palette: true, mobileSidebar: false })}
+          icon={Home}
+          label={t('settings.general.startPages.home')}
+          active={route.name === 'home'}
+          onClick={go(() => navigate({ name: 'home' }))}
         />
         <NavItem
           icon={CalendarDays}
           label={t('sidebar.today')}
           active={isToday}
           onClick={go(() => openToday())}
-        />
-        <NavItem
-          icon={Home}
-          label={t('settings.general.startPages.home')}
-          active={route.name === 'home'}
-          onClick={go(() => navigate({ name: 'home' }))}
         />
         <NavItem
           icon={CheckSquare}
@@ -252,27 +262,52 @@ export function Sidebar() {
           onClick={go(() => navigate({ name: 'tasks' }))}
         />
         <NavItem
-          icon={Hash}
-          label={t('sidebar.tags')}
-          active={route.name === 'tags' || route.name === 'tag'}
-          count={tagCount}
-          onClick={go(() => navigate({ name: 'tags' }))}
+          icon={MoreHorizontal}
+          label={t('sidebar.more')}
+          active={moreActive}
+          expanded={moreOpen}
+          onClick={() => setMoreOpen(true)}
         />
-        <NavItem
-          icon={Network}
-          label={t('sidebar.graph')}
-          active={route.name === 'graph'}
-          onClick={go(() => navigate({ name: 'graph', focus: null }))}
-        />
-        {prefs.assistant && desktop?.assistant && (
-          <NavItem
-            icon={Sparkles}
-            label={t('settings.sections.assistant')}
-            active={prefs.assistantOpen}
-            onClick={() => setPreferences({ assistantOpen: !prefs.assistantOpen })}
-          />
-        )}
       </nav>
+      {moreOpen && (
+        <Dialog
+          title={t('sidebar.moreFeatures')}
+          size="small"
+          className="sidebar-tools-drawer"
+          onClose={() => setMoreOpen(false)}
+        >
+          <nav className="sidebar-tools-nav" aria-label={t('sidebar.moreFeatures')}>
+            <NavItem
+              icon={Search}
+              label={t('common.search')}
+              hint={formatShortcut('Mod+K')}
+              active={route.name === 'search'}
+              onClick={go(() => setUi({ palette: true, mobileSidebar: false }))}
+            />
+            <NavItem
+              icon={Hash}
+              label={t('sidebar.tags')}
+              active={route.name === 'tags' || route.name === 'tag'}
+              count={tagCount}
+              onClick={go(() => navigate({ name: 'tags' }))}
+            />
+            <NavItem
+              icon={Network}
+              label={t('sidebar.graph')}
+              active={route.name === 'graph'}
+              onClick={go(() => navigate({ name: 'graph', focus: null }))}
+            />
+            {prefs.assistant && desktop?.assistant && (
+              <NavItem
+                icon={Sparkles}
+                label={t('settings.sections.assistant')}
+                active={prefs.assistantOpen}
+                onClick={go(() => setPreferences({ assistantOpen: !prefs.assistantOpen }))}
+              />
+            )}
+          </nav>
+        </Dialog>
+      )}
 
       <div className="sidebar-scroll">
         {favorites.length > 0 && (

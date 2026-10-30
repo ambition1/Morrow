@@ -77,6 +77,8 @@ export const en = {
     remove: 'Remove',
   },
   sidebar: {
+    more: 'More',
+    moreFeatures: 'More features',
     sidebar: 'Sidebar',
     morrowHome: 'Morrow home',
     main: 'Main',

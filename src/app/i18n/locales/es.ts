@@ -79,6 +79,8 @@ export const es: TranslationSchema = {
     remove: 'Eliminar',
   },
   sidebar: {
+    more: 'Más',
+    moreFeatures: 'Más funciones',
     sidebar: 'Barra lateral',
     morrowHome: 'Inicio de Morrow',
     main: 'Principal',

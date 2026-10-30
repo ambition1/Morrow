@@ -82,6 +82,8 @@ export const zhCN: TranslationSchema = {
     remove: '移除',
   },
   sidebar: {
+    more: '更多',
+    moreFeatures: '更多功能',
     sidebar: '侧边栏',
     morrowHome: 'Morrow 首页',
     main: '主要功能',

@@ -78,6 +78,8 @@ export const pt: TranslationSchema = {
     remove: 'Remover',
   },
   sidebar: {
+    more: 'Mais',
+    moreFeatures: 'Mais recursos',
     sidebar: 'Barra lateral',
     morrowHome: 'Início do Morrow',
     main: 'Principal',
