@@ -1859,7 +1859,7 @@ td:hover .prop-empty,
 [data-desktop] .assistant-header {
   padding-right: calc(8px + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
 }
-[data-desktop] .app.has-assistant .tab-bar {
+[data-desktop] .app.has-assistant .pane:last-child .topbar {
   padding-right: 8px;
 }
 .assistant-header svg:first-child {

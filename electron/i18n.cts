@@ -12,8 +12,6 @@ const chinese: Record<string, string> = {
   Undo: '撤销',
   Redo: '重做',
   Window: '窗口',
-  'New Tab': '新建标签页',
-  'Close Tab': '关闭标签页',
   'Add to dictionary': '添加到词典',
   'Export as PDF': '导出为 PDF',
   'Choose a folder for your notes': '选择笔记文件夹',

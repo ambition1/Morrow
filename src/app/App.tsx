@@ -10,7 +10,6 @@ import { TagsView, TagView } from './components/TagsView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageView } from './components/PageView';
 import { Toasts } from './components/primitives';
-import { TabBar } from './components/TabBar';
 import { SearchView } from './components/SearchView';
 import { Sidebar } from './components/Sidebar';
 import { HomeView } from './components/Home';
@@ -19,14 +18,14 @@ import { commitEditors, undoRedo } from './editor/commits';
 import { ensureToday, writeAutoBackup } from './operations';
 import { startAutoSync, syncWith } from './sync';
 import { startUpdateChecks } from './updates';
-import { desktop, isMac } from './platform/desktop';
+import { desktop } from './platform/desktop';
 import { getPreferences, resolvedTheme, setPreferences, usePreferences } from './platform/preferences';
 import { navigate, parseRoute, routeHash, useRoute } from './router';
 import type { Route } from './router';
 import { getUi, setUi, toast, useUi } from './ui';
 import { loadCustomCss } from './customCss';
-import { activateTabAt, goBack, PaneContext, setActivePane, startTabs, useTabs } from './tabs';
-import type { PaneId } from './tabs';
+import { goBack, PaneContext, setActivePane, startNavigation, useNavigation } from './navigation';
+import type { PaneId } from './navigation';
 import { getSession } from './workspace';
 
 const AUTO_BACKUP_MS = 10 * 60 * 1000;
@@ -64,13 +63,6 @@ function useGlobalShortcuts() {
       if (ui.dialog) return;
       if (event.key === 'Escape' && ui.focusMode && !ui.palette) {
         setUi({ focusMode: false });
-        return;
-      }
-      // ctrl or cmd and a number picks a tab, nine is always the last one
-      const digit = /^Digit([1-9])$/.exec(event.code);
-      if (digit && (isMac ? event.metaKey : event.ctrlKey) && !event.altKey && !event.shiftKey) {
-        event.preventDefault();
-        activateTabAt(Number(digit[1]));
         return;
       }
       if (matchesShortcut(event, 'Mod+P')) {
@@ -225,7 +217,7 @@ function Pane({
         data-pane={pane}
         data-size={size}
         style={style}
-        aria-label={pane === 'side' ? t('tabs.secondPage') : undefined}
+        aria-label={pane === 'side' ? t('navigation.secondPage') : undefined}
         onPointerDownCapture={() => setActivePane(pane)}
         onFocusCapture={() => setActivePane(pane)}
       >
@@ -276,7 +268,7 @@ function SplitResizer() {
       className="split-resizer"
       role="separator"
       aria-orientation="vertical"
-      aria-label={t('tabs.resizeSplit')}
+      aria-label={t('navigation.resizeSplit')}
       onPointerDown={onPointerDown}
       onDoubleClick={() => setPreferences({ splitShare: 0.5 })}
     />
@@ -304,7 +296,7 @@ export function App() {
   const route = useRoute();
   const ui = useUi();
   const prefs = usePreferences();
-  const tabs = useTabs();
+  const navigation = useNavigation();
   useTheme(prefs.theme);
   // 同步语言标记与字体，使设置立即影响整个界面。
   useEffect(() => {
@@ -317,7 +309,7 @@ export function App() {
     document.documentElement.dataset.colorful = prefs.colorful ? 'true' : 'false';
   }, [prefs.accent, prefs.colorful]);
   useGlobalShortcuts();
-  useEffect(() => startTabs(), []);
+  useEffect(() => startNavigation(), []);
   useStartPage();
   useLifecycle();
   useGlassLight();
@@ -326,7 +318,7 @@ export function App() {
     setUi({ mobileSidebar: false });
   }, [route]);
 
-  const side = tabs.tabs.find((tab) => tab.id === tabs.active)?.side ?? null;
+  const side = navigation.main.side;
   const sideRoute = useMemo(() => (side ? parseRoute(side.hash) : null), [side]);
 
   return (
@@ -346,12 +338,11 @@ export function App() {
       <Sidebar />
       <div className="scrim" aria-hidden="true" onClick={() => setUi({ mobileSidebar: false })} />
       <main className="main" id="main-content" tabIndex={-1}>
-        <TabBar />
         <div className={`panes${sideRoute ? ' is-split' : ''}`}>
           <Pane
             pane="main"
             route={route}
-            active={!sideRoute || tabs.pane === 'main'}
+            active={!sideRoute || navigation.pane === 'main'}
             style={sideRoute ? { flexGrow: prefs.splitShare } : undefined}
           />
           {sideRoute && (
@@ -360,7 +351,7 @@ export function App() {
               <Pane
                 pane="side"
                 route={sideRoute}
-                active={tabs.pane === 'side'}
+                active={navigation.pane === 'side'}
                 style={{ flexGrow: 1 - prefs.splitShare }}
               />
             </>

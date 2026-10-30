@@ -23,7 +23,16 @@ import { ACTION_SHORTCUTS, formatShortcut, runAction } from '../actions';
 import { toggleFavorite } from '../operations';
 import { usePreferences } from '../platform/preferences';
 import { openPage } from '../router';
-import { canGo, closeSide, goBack, goForward, openSide, swapSides, usePane, useTabs } from '../tabs';
+import {
+  canGo,
+  closeSide,
+  goBack,
+  goForward,
+  openSide,
+  swapSides,
+  usePane,
+  useNavigation,
+} from '../navigation';
 import { setUi } from '../ui';
 import { getSession, useSaveStatus, useWorkspace } from '../workspace';
 import { Menu } from './Menu';
@@ -63,10 +72,9 @@ export function SidebarToggle() {
 function HistoryButtons() {
   const { t } = useTranslation();
   const pane = usePane();
-  const { tabs, active } = useTabs();
-  const tab = tabs.find((item) => item.id === active);
-  const back = tab ? canGo(tab, pane, 'back') : false;
-  const forward = tab ? canGo(tab, pane, 'forward') : false;
+  const { main } = useNavigation();
+  const back = canGo(main, pane, 'back');
+  const forward = canGo(main, pane, 'forward');
   return (
     <span className="history-buttons">
       <button
@@ -97,8 +105,7 @@ function HistoryButtons() {
 function SplitButtons() {
   const { t } = useTranslation();
   const pane = usePane();
-  const { tabs, active } = useTabs();
-  const split = Boolean(tabs.find((item) => item.id === active)?.side);
+  const split = Boolean(useNavigation().main.side);
   if (pane === 'side')
     return (
       <>

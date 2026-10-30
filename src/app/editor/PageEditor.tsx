@@ -19,7 +19,7 @@ import { findPagesByTitle, foldText, pageIdByTitle, resolveLinkTarget } from '..
 import { ancestorsOf, isEffectivelyTrashed } from '../../core/tree';
 import { createPage, openToday } from '../operations';
 import { navigate, openPage } from '../router';
-import { targetPane, usePane } from '../tabs';
+import { targetPane, usePane } from '../navigation';
 import { getSession, getState, run } from '../workspace';
 import type { BlockMenuRequest } from './BlockHandle';
 import { registerCommit, setFocusedEditor } from './commits';

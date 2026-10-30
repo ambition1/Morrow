@@ -48,8 +48,8 @@ import { newId, pickFiles, saveFile, stamp } from './platform/files';
 import { getPreferences, setPreferences } from './platform/preferences';
 import { navigate, openPage, parseRoute } from './router';
 import type { Route } from './router';
-import { getTabs } from './tabs';
-import type { PaneId } from './tabs';
+import { getNavigation } from './navigation';
+import type { PaneId } from './navigation';
 import { dateLocale, getLocale, t } from './i18n';
 import { confirmAction, setUi, toast } from './ui';
 import { getSession, getState, run, runAll } from './workspace';
@@ -327,10 +327,9 @@ export function revealPage(id: PageId): void {
   if (path !== null) void desktop?.vault?.reveal(path);
 }
 
-// the sides of the open tab that show something, a split tab has two
+// 找出当前工作区中显示目标内容的区域。
 function panesShowing(match: (route: Route) => boolean): PaneId[] {
-  const { tabs, active } = getTabs();
-  const side = tabs.find((tab) => tab.id === active)?.side;
+  const { side } = getNavigation().main;
   const panes: PaneId[] = [];
   if (match(parseRoute(window.location.hash))) panes.push('main');
   if (side && match(parseRoute(side.hash))) panes.push('side');
@@ -478,7 +477,7 @@ export async function exportPagePdf(id: PageId): Promise<void> {
   // pictures and diagrams get a moment to finish drawing
   await new Promise((resolve) => setTimeout(resolve, 400));
   // a split tab prints only the side with the page on it
-  const pane = showing[0] ?? (getTabs().pane === 'side' ? 'side' : 'main');
+  const pane = showing[0] ?? (getNavigation().pane === 'side' ? 'side' : 'main');
   const root = document.documentElement;
   root.dataset.printPane = pane;
   root.classList.add('is-printing');

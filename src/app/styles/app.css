@@ -1678,32 +1678,19 @@ input[type='checkbox']:checked::after {
   -webkit-app-region: no-drag;
 }
 
-/* the tab bar is the title bar row, the window's own buttons sit at its end */
-[data-desktop] .tab-bar {
-  padding-right: calc(8px + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
-}
-
-[data-desktop='darwin'] .sidebar-header,
-[data-desktop='darwin'] .sidebar-collapsed .tab-bar {
-  padding-left: 84px;
-}
-
-/* focus mode hides the tabs, the top bars are the title bar row again */
-[data-desktop] .app.focus-mode .pane:last-child .topbar {
+/* 移除标签栏后，顶部操作区承担窗口拖动与系统按钮留白。 */
+[data-desktop] .pane:last-child .topbar {
   padding-right: calc(12px + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
 }
-
+[data-desktop='darwin'] .sidebar-header,
+[data-desktop='darwin'] .sidebar-collapsed .pane[data-pane='main'] .topbar,
 [data-desktop='darwin'] .app.focus-mode .pane[data-pane='main'] .topbar {
   padding-left: 84px;
 }
 
-/* a narrow window hides a lone tab, the top bar is the title bar row again */
+/* 窄屏侧栏隐藏时，主工具栏仍需避让 macOS 窗口按钮。 */
 @media (max-width: 800px) {
-  [data-desktop] .main:has(> .tab-bar.is-single) .pane[data-pane='main'] .topbar {
-    padding-right: calc(12px + 100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
-  }
-
-  [data-desktop='darwin'] .main:has(> .tab-bar.is-single) .pane[data-pane='main'] .topbar {
+  [data-desktop='darwin'] .pane[data-pane='main'] .topbar {
     padding-left: 84px;
   }
 }

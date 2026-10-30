@@ -33,7 +33,7 @@ import { PageTags } from './TagsView';
 import { deleteForever, restorePage, trashPage } from '../operations';
 import { usePreferences } from '../platform/preferences';
 import { navigate, openPage, routeHash } from '../router';
-import { openSide } from '../tabs';
+import { openSide } from '../navigation';
 import { getUi, openDialog, setUi, useUi } from '../ui';
 import { getSession, run, useWorkspace } from '../workspace';
 import type { MenuEntry } from './Menu';

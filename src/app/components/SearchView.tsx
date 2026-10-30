@@ -7,7 +7,7 @@ import { livePages } from '../../core/tree';
 import { Select } from './Select';
 import type { SearchFilters, SearchResult } from '../../core/search';
 import { navigate, openPage } from '../router';
-import { usePane } from '../tabs';
+import { usePane } from '../navigation';
 import { useWorkspace } from '../workspace';
 import { PageIcon } from './Sidebar';
 import { relativeTime } from './primitives';

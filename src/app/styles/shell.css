@@ -102,17 +102,7 @@
   gap: 4px;
 }
 
-/* 页签与顶部操作区保持紧凑，当前文档以纸面背景连接内容。 */
-.tab-bar {
-  padding-inline: 12px;
-}
-
-.tab {
-  transition:
-    background-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease);
-}
-
+/* 顶部操作区保持紧凑，正文直接连接面板上沿。 */
 .topbar {
   min-height: 52px;
   padding-inline: 16px;
@@ -210,7 +200,6 @@
 /* 键盘聚焦与触摸交互都可见，不依赖悬停显示必要操作。 */
 .nav-item:focus-visible,
 .tree-row:focus-visible,
-.tab:focus-visible,
 .menu-item:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
@@ -269,7 +258,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .nav-item,
-  .tab,
   .menu-item,
   .segmented button {
     transition: none;

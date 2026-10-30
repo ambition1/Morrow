@@ -610,22 +610,9 @@ function buildMacMenu(): Menu {
       ],
     },
     {
-      // cmd w closes the tab, the window closes with cmd shift w
       label: nativeText('Window'),
       submenu: [
-        {
-          label: nativeText('New Tab'),
-          accelerator: 'Cmd+T',
-          registerAccelerator: false,
-          click: send('tab.new'),
-        },
-        {
-          label: nativeText('Close Tab'),
-          accelerator: 'Cmd+W',
-          registerAccelerator: false,
-          click: send('tab.close'),
-        },
-        { label: nativeText('Close'), role: 'close', accelerator: 'Cmd+Shift+W' },
+        { label: nativeText('Close'), role: 'close' },
         { type: 'separator' },
         { label: nativeText('Minimize'), role: 'minimize' },
         { label: nativeText('Zoom'), role: 'zoom' },

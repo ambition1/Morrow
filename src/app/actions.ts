@@ -5,7 +5,6 @@ import {
   ArrowRightLeft,
   Columns2,
   PanelRightClose,
-  RotateCcw,
   CalendarDays,
   CheckSquare,
   Copy,
@@ -36,7 +35,6 @@ import {
   Sun,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react';
 import type { PageId } from '../core/model';
 import { isEffectivelyTrashed } from '../core/tree';
@@ -56,19 +54,7 @@ import {
   trashPage,
 } from './operations';
 import { desktop, isMac } from './platform/desktop';
-import {
-  activeHash,
-  closeOtherTabs,
-  closeSide,
-  closeTab,
-  getTabs,
-  goBack,
-  goForward,
-  openSide,
-  openTab,
-  reopenClosedTab,
-  swapSides,
-} from './tabs';
+import { closeSide, getNavigation, goBack, goForward, openSide, swapSides } from './navigation';
 import { chooseVaultFolder } from './vaults';
 import { getPreferences, resolvedTheme, setPreferences } from './platform/preferences';
 import { activeRoute, navigate } from './router';
@@ -97,57 +83,13 @@ export const ACTION_SHORTCUTS = {
 };
 
 const hasSplit = () => {
-  const { tabs, active } = getTabs();
-  return Boolean(tabs.find((tab) => tab.id === active)?.side);
+  return Boolean(getNavigation().main.side);
 };
 
 const onLivePage = ({ pageId }: ActionContext) =>
   pageId !== null && !isEffectivelyTrashed(getState().pages, pageId);
 
 export const ACTIONS: Action[] = [
-  {
-    id: 'tab.new',
-    label: 'New tab',
-    group: 'View',
-    icon: Plus,
-    shortcut: 'Mod+T',
-    keywords: 'tabs open',
-    run: () => openTab(),
-  },
-  {
-    id: 'tab.close',
-    label: 'Close tab',
-    group: 'View',
-    icon: X,
-    shortcut: 'Mod+W',
-    keywords: 'tabs',
-    run: () => closeTab(),
-  },
-  {
-    id: 'tab.duplicate',
-    label: 'Open this page in a new tab',
-    group: 'View',
-    icon: Plus,
-    keywords: 'tabs split',
-    run: () => openTab(activeHash()),
-  },
-  {
-    id: 'tab.reopen',
-    label: 'Reopen closed tab',
-    group: 'View',
-    icon: RotateCcw,
-    shortcut: 'Mod+Shift+T',
-    keywords: 'tabs undo restore',
-    run: () => reopenClosedTab(),
-  },
-  {
-    id: 'tab.closeOthers',
-    label: 'Close other tabs',
-    group: 'View',
-    icon: X,
-    keywords: 'tabs',
-    run: () => closeOtherTabs(),
-  },
   {
     id: 'go.back',
     label: 'Go back',

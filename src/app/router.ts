@@ -1,7 +1,14 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { PageId } from '../core/model';
-import { activeHash, getTabs, showInMain, showInSide, subscribeTabs, targetPane } from './tabs';
-import type { PaneId } from './tabs';
+import {
+  activeHash,
+  getNavigation,
+  showInMain,
+  showInSide,
+  subscribeNavigation,
+  targetPane,
+} from './navigation';
+import type { PaneId } from './navigation';
 
 export type Route =
   | { name: 'home' }
@@ -59,11 +66,11 @@ export function routeHash(route: Route): string {
   }
 }
 
-// goes to the side of a split tab that was used last, or the one named
+// 导航到最后使用的区域，或显式指定的区域。
 export function navigate(route: Route, options: { replace?: boolean; pane?: PaneId } = {}): void {
   const hash = routeHash(route);
   const pane = options.pane ?? targetPane();
-  if (pane === 'side' && getTabs().tabs.find((tab) => tab.id === getTabs().active)?.side) {
+  if (pane === 'side' && getNavigation().main.side) {
     showInSide(hash, options.replace);
     return;
   }
@@ -93,11 +100,11 @@ export function useRoute(): Route {
   }, snapshot);
 }
 
-// the place shown where navigation goes, the side of a split tab when that side is in use
+// 返回当前接收导航的区域位置。
 export function useActiveRoute(): Route {
   const hash = useSyncExternalStore((listener) => {
     window.addEventListener('hashchange', listener);
-    const stop = subscribeTabs(listener);
+    const stop = subscribeNavigation(listener);
     return () => {
       window.removeEventListener('hashchange', listener);
       stop();

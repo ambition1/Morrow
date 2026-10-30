@@ -47,10 +47,6 @@
   border-radius: var(--radius-lg);
 }
 
-.tab {
-  border-radius: 12px 12px 0 0;
-}
-
 /* 高光绘制在背景中，不添加会遮住按钮或文本的覆盖层。 */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :is(.dialog, .popover, .palette, .canvas-toolbar) {
