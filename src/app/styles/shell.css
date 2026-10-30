@@ -275,3 +275,9 @@
     transition: none;
   }
 }
+
+/* 每日笔记的年、月为虚拟目录，计数沿用导航语义样式。 */
+.journal-group-row .nav-count {
+  margin-left: auto;
+  flex: none;
+}

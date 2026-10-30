@@ -25,8 +25,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { dateKey } from '../../core/daily';
+import { groupJournalPages } from '../../core/journalGroups';
+import { inlineDateCalendarDate } from '../../core/inlineDate';
 import { displayTitle } from '../i18n/labels';
 import type { PageId, PageMeta, WorkspaceState } from '../../core/model';
 import { collectTasks } from '../../core/tasks';
@@ -40,7 +42,7 @@ import {
 } from '../../core/tree';
 import { collectTags } from '../../core/tags';
 import { formatShortcut, runAction } from '../actions';
-import { t, useTranslation } from '../i18n';
+import { dateLocale, t, useTranslation } from '../i18n';
 import { desktop } from '../platform/desktop';
 import { vaultName } from '../platform/vault';
 import { chooseVaultFolder, createVault, switchVault } from '../vaults';
@@ -408,10 +410,24 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
   const ui = useUi();
   const [drop, setDrop] = useState<{ id: PageId; zone: DropZone } | null>(null);
   const [menu, setMenu] = useState<{ id: PageId; anchor: HTMLElement } | null>(null);
+  /** 当前活动页面下用户主动折叠的虚拟分组；切换页面后重新揭示活动路径。 */
+  const [closedGroups, setClosedGroups] = useState<{ active: PageId | null; keys: string[] }>({
+    active: activeId,
+    keys: [],
+  });
+  // 活动页变化时丢弃上一次的临时折叠，返回旧笔记也必须重新揭示其路径。
+  if (closedGroups.active !== activeId) setClosedGroups({ active: activeId, keys: [] });
   const dragging = useRef<PageId | null>(null);
   const treeRef = useRef<HTMLUListElement>(null);
   // how many subpages each folder shows, a journal of years opens with its latest days and the rest on request
   const [limits, setLimits] = useState<Record<string, number>>({});
+
+  // 打开历史日期后将选中项滚入目录可视区，不改变正文滚动位置。
+  useEffect(() => {
+    treeRef.current
+      ?.querySelector<HTMLElement>('[aria-selected="true"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activeId]);
 
   const ancestorIds = useMemo(
     () => new Set(activeId ? ancestorsOf(state.pages, activeId).map((page) => page.id) : []),
@@ -452,6 +468,50 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
     const current = document.activeElement as HTMLElement | null;
     const index = rows.indexOf(current as HTMLElement);
     if (index === -1) return;
+    /** 年月是虚拟树节点，仅支持展开与键盘导航，不执行页面删除或重命名。 */
+    const groupId = current?.dataset.groupId;
+    if (groupId) {
+      const open = current!.getAttribute('aria-expanded') === 'true';
+      const toggleGroup = () => current!.click();
+      const parentKey = current!.dataset.treeParent;
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          rows[index + 1]?.focus();
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          rows[index - 1]?.focus();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          if (!open) toggleGroup();
+          else rows[index + 1]?.focus();
+          break;
+        case 'ArrowLeft':
+          event.preventDefault();
+          if (open) toggleGroup();
+          else
+            rows
+              .find((row) => row.dataset.groupId === parentKey || row.dataset.pageId === parentKey)
+              ?.focus();
+          break;
+        case 'Enter':
+        case ' ':
+          event.preventDefault();
+          toggleGroup();
+          break;
+        case 'Home':
+          event.preventDefault();
+          rows[0]?.focus();
+          break;
+        case 'End':
+          event.preventDefault();
+          rows[rows.length - 1]?.focus();
+          break;
+      }
+      return;
+    }
     const id = current!.dataset.pageId!;
     const page = state.pages[id];
     if (!page) return;
@@ -474,6 +534,8 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
       case 'ArrowLeft':
         event.preventDefault();
         if (hasChildren && expandedSet.has(id)) toggle(id);
+        else if (current?.dataset.treeParent)
+          focus(rows.find((row) => row.dataset.groupId === current.dataset.treeParent));
         else if (page.parentId) focus(rows.find((row) => row.dataset.pageId === page.parentId));
         break;
       case 'Enter':
@@ -501,9 +563,126 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
     }
   };
 
-  const renderLevel = (parentId: PageId | null, depth: number): React.ReactNode => {
-    const all = childrenOf(state.pages, parentId);
+  const renderLevel = (
+    parentId: PageId | null,
+    depth: number,
+    supplied?: PageMeta[],
+    treeParent?: string,
+  ): React.ReactNode => {
+    const all = supplied ?? childrenOf(state.pages, parentId);
     if (all.length === 0) return null;
+    if (!supplied && parentId && state.pages[parentId]?.kind === 'journal') {
+      /** 按真实日期分组，不修改parentId、order或页面路径。 */
+      const grouped = groupJournalPages(all);
+      /** 活动页也可能是每日笔记下面的普通子页面。 */
+      const activePath = new Set(
+        activeId ? [activeId, ...ancestorsOf(state.pages, activeId).map((page) => page.id)] : [],
+      );
+      /** 有活动日期时仅默认揭示对应年月，否则展开最新年月。 */
+      const activeMonth = grouped.years
+        .flatMap((year) => year.months)
+        .find((month) => month.pages.some((page) => activePath.has(page.id)));
+      /** 没有活动日期时默认展开最新月份。 */
+      const defaultMonth = activeMonth ?? grouped.years[0]?.months[0];
+      /** 虚拟节点的键与真实页面ID分离，展开偏好仍使用已有设置。 */
+      const keyOf = (key: string) => `journal:${parentId}:${key}`;
+      /** 分组没有页面菜单、拖放或重命名操作。 */
+      const groupRow = (
+        key: string,
+        label: string,
+        count: number,
+        level: number,
+        parent: string,
+        children: () => React.ReactNode,
+      ) => {
+        /** 页面ID以外的稳定分组键。 */
+        const id = keyOf(key);
+        /** 最新或活动日期所属月份作为默认展开范围。 */
+        const autoOpen = defaultMonth?.key.startsWith(key) ?? false;
+        /** 当前活动页下的明确折叠操作优先于自动揭示。 */
+        const manuallyClosed = closedGroups.active === activeId && closedGroups.keys.includes(id);
+        /** 合并持久化偏好和当前活动路径。 */
+        const open =
+          !manuallyClosed &&
+          (activeMonth?.key.startsWith(key) ||
+            (!expandedSet.has(`${id}:closed`) && (expandedSet.has(id) || autoOpen)));
+        /** 展开和折叠只更新界面偏好。 */
+        const toggleGroup = () => {
+          /** 同一分组只保留一种偏好标记。 */
+          const saved = getPreferences().expanded.filter((item) => item !== id && item !== `${id}:closed`);
+          setPreferences({ expanded: [...saved, open ? `${id}:closed` : id] });
+          setClosedGroups((previous) => ({
+            active: activeId,
+            keys: open
+              ? [...(previous.active === activeId ? previous.keys : []), id]
+              : (previous.active === activeId ? previous.keys : []).filter((item) => item !== id),
+          }));
+        };
+        return (
+          <li key={id} role="none">
+            <div
+              role="treeitem"
+              aria-label={label}
+              aria-level={level + 1}
+              aria-expanded={!!open}
+              tabIndex={manuallyClosed && activeMonth?.key.startsWith(key) ? 0 : -1}
+              data-group-id={id}
+              data-tree-parent={parent}
+              className="tree-row journal-group-row"
+              style={{ '--depth': level } as React.CSSProperties}
+              onClick={toggleGroup}
+            >
+              <span className="tree-toggle" aria-hidden="true">
+                <ChevronRight size={14} strokeWidth={2} className={open ? 'is-open' : ''} />
+              </span>
+              <span className="tree-icon">
+                <CalendarDays size={15} strokeWidth={1.75} />
+              </span>
+              <span className="tree-title">{label}</span>
+              <span className="nav-count" aria-hidden="true">
+                {count}
+              </span>
+            </div>
+            {open && (
+              <ul role="group" className="tree-group">
+                {children()}
+              </ul>
+            )}
+          </li>
+        );
+      };
+      return (
+        <>
+          {grouped.years.map((year) =>
+            groupRow(
+              year.key,
+              inlineDateCalendarDate(`${year.key}-01-01`)!.toLocaleDateString(dateLocale(), {
+                year: 'numeric',
+                timeZone: 'UTC',
+              }),
+              year.count,
+              depth,
+              parentId,
+              () =>
+                year.months.map((month) =>
+                  groupRow(
+                    month.key,
+                    inlineDateCalendarDate(`${month.key}-01`)!.toLocaleDateString(dateLocale(), {
+                      month: 'long',
+                      timeZone: 'UTC',
+                    }),
+                    month.pages.length,
+                    depth + 1,
+                    keyOf(year.key),
+                    () => renderLevel(parentId, depth + 2, month.pages, keyOf(month.key)),
+                  ),
+                ),
+            ),
+          )}
+          {renderLevel(parentId, depth, grouped.other)}
+        </>
+      );
+    }
     const key = parentId ?? '';
     let limit = limits[key] ?? SUBPAGES_SHOWN;
     // the open page and the folders on its way always show
@@ -520,6 +699,7 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
         <li key={page.id} role="none">
           <TreeRow
             page={page}
+            treeParent={treeParent}
             depth={depth}
             hasChildren={hasChildren}
             isOpen={isOpen}
@@ -593,7 +773,29 @@ function PageTree({ state, activeId, expanded }: TreeProps) {
   );
 }
 
+/** 默认日期标题在年月层级内只显示日和星期，用户自定义标题保持原样。 */
+function compactDailyTitle(page: PageMeta): string {
+  /** 只格式化经过校验的真实日期。 */
+  const date = page.dailyDate ? inlineDateCalendarDate(page.dailyDate) : null;
+  if (!date) return displayTitle(page);
+  /** 识别既有语言生成的默认标题，避免缩短用户自定义名称。 */
+  const defaultNames = [undefined, 'zh-CN', 'en-US', 'en-GB', 'es', 'pt'].map((locale) =>
+    date.toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+      timeZone: 'UTC',
+    }),
+  );
+  return page.title === page.dailyDate || defaultNames.includes(page.title)
+    ? `${date.toLocaleDateString(dateLocale(), { day: 'numeric', timeZone: 'UTC' })} ${date.toLocaleDateString(dateLocale(), { weekday: 'short', timeZone: 'UTC' })}`
+    : displayTitle(page);
+}
+
 interface RowProps {
+  /** 日期叶子节点的虚拟月份父级，仅用于键盘返回。 */
+  treeParent?: string;
   page: PageMeta;
   depth: number;
   hasChildren: boolean;
@@ -629,6 +831,7 @@ const TreeRow = memo(function TreeRow(props: RowProps) {
       aria-selected={active}
       aria-expanded={hasChildren ? isOpen : undefined}
       data-page-id={page.id}
+      data-tree-parent={props.treeParent}
       className={`tree-row${active ? ' is-active' : ''}${menuOpen ? ' is-menu-open' : ''}${dropZone ? ` drop-${dropZone}` : ''}`}
       style={{ '--depth': depth } as React.CSSProperties}
       draggable={!renaming}
@@ -679,7 +882,13 @@ const TreeRow = memo(function TreeRow(props: RowProps) {
       <span className="tree-icon">
         <PageIcon page={page} />
       </span>
-      {renaming ? <RenameInput page={page} /> : <span className="tree-title">{displayTitle(page)}</span>}
+      {renaming ? (
+        <RenameInput page={page} />
+      ) : (
+        <span className="tree-title" title={displayTitle(page)}>
+          {props.treeParent ? compactDailyTitle(page) : displayTitle(page)}
+        </span>
+      )}
       {!renaming && (
         <span className="tree-actions">
           <button
