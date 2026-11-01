@@ -44,7 +44,7 @@ export function Menu({ anchor, entries, onClose, placement = 'bottom-start', lab
       middleware: [
         offset(4),
         flip({ padding: 8, boundary }),
-        shift({ padding: 8, boundary, crossAxis: !!boundary }),
+        shift({ padding: 8, boundary, crossAxis: true }),
         ...(boundary
           ? [
               size({
@@ -59,11 +59,13 @@ export function Menu({ anchor, entries, onClose, placement = 'bottom-start', lab
           : []),
       ],
     }).then(({ x, y }) => {
+      // 定位完成后菜单才可见，此时聚焦才能生效；卸载后的异步结果不再抢焦点。
+      if (ref.current !== element) return;
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
       element.style.visibility = 'visible';
+      element.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
     });
-    element.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
   }, [anchor, placement, boundary]);
 
   useEffect(() => {

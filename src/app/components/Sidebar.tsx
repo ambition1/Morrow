@@ -40,7 +40,6 @@ import {
   livePages,
   trashedPages,
 } from '../../core/tree';
-import { collectTags } from '../../core/tags';
 import { formatShortcut, runAction } from '../actions';
 import { dateLocale, t, useTranslation } from '../i18n';
 import { desktop } from '../platform/desktop';
@@ -55,7 +54,7 @@ import { run, useWorkspace } from '../workspace';
 import { Menu } from './Menu';
 import { pageMenuEntries } from './pageMenu';
 import { Emoji } from './Emoji';
-import { Dialog, Logo } from './primitives';
+import { Logo } from './primitives';
 import { PAGE_DRAG_TYPE } from '../editor/PageLink';
 
 type DropZone = 'before' | 'inside' | 'after';
@@ -117,10 +116,10 @@ function NavItem({
   icon: LucideIcon;
   label: string;
   active?: boolean;
-  onClick: () => void;
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   hint?: string;
   count?: number;
-  /** 抽屉入口暴露展开状态，普通导航不设置此属性。 */
+  /** 菜单入口暴露展开状态，普通导航不设置此属性。 */
   expanded?: boolean;
 }) {
   return (
@@ -128,7 +127,7 @@ function NavItem({
       type="button"
       className={`nav-item${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
-      aria-haspopup={expanded === undefined ? undefined : 'dialog'}
+      aria-haspopup={expanded === undefined ? undefined : 'menu'}
       aria-expanded={expanded}
       onClick={onClick}
     >
@@ -142,7 +141,7 @@ function NavItem({
 
 export function Sidebar() {
   const { t } = useTranslation();
-  /** 搜索快捷键打开命令面板时，需要收起当前抽屉以避免两个焦点陷阱叠加。 */
+  /** 搜索快捷键打开命令面板时，需要收起当前菜单以避免两个焦点陷阱叠加。 */
   const ui = useUi();
   const state = useWorkspace();
   const route = useActiveRoute();
@@ -155,12 +154,11 @@ export function Sidebar() {
   );
   const trashCount = useMemo(() => trashedPages(state.pages).length, [state.pages]);
   const openTasks = useMemo(() => collectTasks(state).filter((task) => !task.checked).length, [state]);
-  const tagCount = useMemo(() => collectTags(state).length, [state]);
-  /** 次要导航统一放入更多功能抽屉。 */
-  const [moreOpen, setMoreOpen] = useState(false);
-  // 快捷键可从抽屉中直接打开搜索，命令面板接管焦点。
-  if (moreOpen && (ui.palette || ui.dialog)) setMoreOpen(false);
-  /** 当前位于次要功能时，抽屉入口仍提示所在区域。 */
+  /** 更多功能菜单定位到点击入口，靠近侧栏展示。 */
+  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
+  // 快捷键可从菜单中直接打开搜索，命令面板接管焦点。
+  if (moreAnchor && (ui.palette || ui.dialog)) setMoreAnchor(null);
+  /** 当前位于次要功能时，菜单入口仍提示所在区域。 */
   const moreActive =
     ['search', 'tags', 'tag', 'graph'].includes(route.name) ||
     !!(prefs.assistant && prefs.assistantOpen && desktop?.assistant);
@@ -192,7 +190,7 @@ export function Sidebar() {
   };
 
   const go = (fn: () => void) => () => {
-    setMoreOpen(false);
+    setMoreAnchor(null);
     fn();
     setUi({ mobileSidebar: false });
   };
@@ -265,48 +263,40 @@ export function Sidebar() {
           icon={MoreHorizontal}
           label={t('sidebar.more')}
           active={moreActive}
-          expanded={moreOpen}
-          onClick={() => setMoreOpen(true)}
+          expanded={!!moreAnchor}
+          onClick={(event) => setMoreAnchor(moreAnchor ? null : event.currentTarget)}
         />
       </nav>
-      {moreOpen && (
-        <Dialog
-          title={t('sidebar.moreFeatures')}
-          size="small"
-          className="sidebar-tools-drawer"
-          onClose={() => setMoreOpen(false)}
-        >
-          <nav className="sidebar-tools-nav" aria-label={t('sidebar.moreFeatures')}>
-            <NavItem
-              icon={Search}
-              label={t('common.search')}
-              hint={formatShortcut('Mod+K')}
-              active={route.name === 'search'}
-              onClick={go(() => setUi({ palette: true, mobileSidebar: false }))}
-            />
-            <NavItem
-              icon={Hash}
-              label={t('sidebar.tags')}
-              active={route.name === 'tags' || route.name === 'tag'}
-              count={tagCount}
-              onClick={go(() => navigate({ name: 'tags' }))}
-            />
-            <NavItem
-              icon={Network}
-              label={t('sidebar.graph')}
-              active={route.name === 'graph'}
-              onClick={go(() => navigate({ name: 'graph', focus: null }))}
-            />
-            {prefs.assistant && desktop?.assistant && (
-              <NavItem
-                icon={Sparkles}
-                label={t('settings.sections.assistant')}
-                active={prefs.assistantOpen}
-                onClick={go(() => setPreferences({ assistantOpen: !prefs.assistantOpen }))}
-              />
-            )}
-          </nav>
-        </Dialog>
+      {moreAnchor && (
+        <Menu
+          anchor={moreAnchor}
+          placement="right-start"
+          label={t('sidebar.moreFeatures')}
+          onClose={() => setMoreAnchor(null)}
+          entries={[
+            {
+              label: t('common.search'),
+              icon: Search,
+              shortcut: formatShortcut('Mod+K'),
+              onSelect: go(() => setUi({ palette: true, mobileSidebar: false })),
+            },
+            { label: t('sidebar.tags'), icon: Hash, onSelect: go(() => navigate({ name: 'tags' })) },
+            {
+              label: t('sidebar.graph'),
+              icon: Network,
+              onSelect: go(() => navigate({ name: 'graph', focus: null })),
+            },
+            ...(prefs.assistant && desktop?.assistant
+              ? [
+                  {
+                    label: t('settings.sections.assistant'),
+                    icon: Sparkles,
+                    onSelect: go(() => setPreferences({ assistantOpen: !prefs.assistantOpen })),
+                  },
+                ]
+              : []),
+          ]}
+        />
       )}
 
       <div className="sidebar-scroll">
