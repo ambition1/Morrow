@@ -311,9 +311,14 @@ export function PageView({ id, find, anchor }: { id: PageId; find: string | null
               <DatabaseView page={page} editable={!trashed && !unreadable} />
             </Suspense>
           )}
-          {page.kind !== 'database' && <Subpages parentId={id} />}
-          {page.dailyDate && <MadeThisDay dailyDate={page.dailyDate} />}
-          <Backlinks id={id} />
+          {/* 空白容器页提供自动导航；有正文时专注阅读，显式插入的链接不受影响。 */}
+          {!unreadable && page.kind !== 'database' && isDocEmpty(doc) && (
+            <>
+              <Subpages parentId={id} />
+              {page.dailyDate && <MadeThisDay dailyDate={page.dailyDate} />}
+              <Backlinks id={id} />
+            </>
+          )}
         </article>
       </div>
     </div>
