@@ -1,0 +1,228 @@
+/**
+ * 功能：附件预览工作区与三种布局，复用项目颜色、圆角及控件令牌。
+ * 作者：xuanli
+ * 创建时间：2026-11-03 12:06:09
+ */
+.file-preview-workspace {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.file-preview-workspace > .panes {
+  min-width: 0;
+  flex: 1 1 0;
+}
+.file-preview-side {
+  position: relative;
+  flex: 0 0 var(--preview-share, 45%);
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+}
+.file-preview-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  color: var(--text);
+  background: var(--surface);
+}
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  font: var(--text-ui)/1.4 var(--font-ui);
+}
+.file-preview-header > strong {
+  flex: 1;
+  min-width: 60px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.file-preview-header .select-button {
+  width: auto;
+  max-width: 160px;
+}
+.file-preview-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+.file-preview-status {
+  display: flex;
+  height: 100%;
+  min-height: 100px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font: var(--text-ui)/1.6 var(--font-ui);
+}
+.file-preview-resizer {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.file-preview-resizer::after {
+  content: '';
+  position: absolute;
+  top: 45%;
+  left: 3px;
+  width: 3px;
+  height: 32px;
+  background: var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.file-preview-resizer:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.file-preview-resizer:hover::after {
+  background: var(--accent);
+}
+.attachment-preview-shell {
+  min-width: 0;
+}
+.attachment-inline-host:not(:empty) {
+  margin-block: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.file-preview-mode-inline {
+  height: 420px;
+  min-height: 240px;
+  max-height: 80vh;
+  resize: vertical;
+  overflow: hidden;
+}
+.file-preview-dialog {
+  width: min(1400px, 96vw);
+  height: 90dvh;
+  max-width: 96vw;
+}
+.file-preview-dialog > .dialog-body {
+  padding: 0;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.file-preview-dialog .file-preview-panel {
+  width: 100%;
+}
+.canvas-file-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .file-preview-workspace {
+    flex-direction: column;
+  }
+  .file-preview-side {
+    flex: 0 0 48%;
+    min-height: 180px;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .file-preview-resizer {
+    display: none;
+  }
+  .file-preview-header {
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+  .file-preview-header > .muted {
+    display: none;
+  }
+  .file-preview-mode-inline {
+    height: 360px;
+  }
+  .file-preview-dialog {
+    height: 94dvh;
+  }
+}
+/* 稳定挂载槽让模式切换只调整布局，保留引擎内部阅读位置。 */
+.file-preview-slot,
+.file-preview-mount {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+.file-preview-dialog > .dialog-body > .file-preview-slot {
+  flex: 1;
+}
+.file-preview-native {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--code-bg);
+}
+/* 通过上游公开 part 将工具条接入项目语义令牌，正文渲染仍保持独立。 */
+.file-preview-engine::part(shell) {
+  --file-viewer-bg: var(--surface);
+  --file-viewer-content-bg: var(--code-bg);
+  --file-viewer-text: var(--text);
+  --file-viewer-muted: var(--text-muted);
+  --file-viewer-font: var(--text-ui)/1.45 var(--font-ui);
+  --file-viewer-border: var(--border);
+  --file-viewer-toolbar-bg: var(--surface);
+  --file-viewer-toolbar-border: var(--border);
+  --file-viewer-toolbar-shadow: none;
+  --file-viewer-button-color: var(--text-muted);
+  --file-viewer-button-hover-bg: var(--accent-soft);
+  --file-viewer-button-hover-color: var(--accent);
+  --file-viewer-focus-ring: var(--focus);
+}
+.file-preview-engine::part(toolbar) {
+  border-radius: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.file-preview-engine::part(button):focus-visible,
+.file-preview-engine::part(input):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* 工具条按容器换行，避免侧边与手机模式裁切搜索入口。 */
+.file-preview-engine::part(toolbar) {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.file-preview-engine::part(toolbar-group) {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.file-preview-engine::part(input) {
+  width: clamp(70px, 12vw, 140px);
+  min-width: 60px;
+}
+.file-preview-engine::part(button) {
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}

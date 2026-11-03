@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { fileViewerRenderers } from '@file-viewer/vite-plugin';
 import { thirdPartyLicenses } from './scripts/licenses.ts';
 import { spawn, spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -82,6 +83,15 @@ function emojiImages(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
+    // 显式惰性导入引擎；插件只负责分包与本地运行资源。
+    fileViewerRenderers({
+      copyAssets: { baseDir: 'file-viewer' },
+      inject: false,
+      preset: 'standard',
+      scan: false,
+      chunkStrategy: 'none',
+      formats: ['ppt', 'xmind', 'drawio'],
+    }),
     desktopShell(),
     // the emoji images are copied as files rather than imported, so their package is named here
     thirdPartyLicenses(['@lobehub/fluent-emoji-3d']),

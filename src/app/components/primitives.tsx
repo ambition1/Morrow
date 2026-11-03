@@ -23,6 +23,39 @@ export function Logo({ size = 20 }: { size?: number }) {
   );
 }
 
+/** 按组合树顺序收集可见控件，包含附件预览的 Shadow DOM。 */
+function dialogFocusables(root: HTMLElement): HTMLElement[] {
+  /** 按实际键盘导航顺序保存焦点目标。 */
+  const result: HTMLElement[] = [];
+  /** 递归进入开放的 shadow root，避免内部控件被焦点圈跳过。 */
+  const visit = (parent: Element | ShadowRoot) => {
+    for (const child of parent.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      if (
+        child.matches(
+          'button, input, select, textarea, a[href], iframe, audio[controls], video[controls], [tabindex]',
+        ) &&
+        child.tabIndex >= 0 &&
+        !child.hasAttribute('disabled') &&
+        child.getClientRects().length > 0
+      )
+        result.push(child);
+      if (child.shadowRoot) visit(child.shadowRoot);
+      else visit(child);
+    }
+  };
+  visit(root);
+  return result;
+}
+
+/** 读取组合树内的真实焦点，document.activeElement 对 shadow 控件只返回宿主。 */
+function deepActiveElement(): Element | null {
+  /** 沿嵌套 shadow root 找到实际激活项。 */
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active;
+}
+
 interface DialogProps {
   title: string;
   onClose: () => void;
@@ -65,16 +98,17 @@ export function Dialog({
         closeRef.current();
       }
       if (event.key === 'Tab' && element) {
-        const items = Array.from(
-          element.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex="0"]'),
-        ).filter((item) => !item.hasAttribute('disabled'));
+        // 文件预览与普通弹窗共享焦点圈，包含 shadow 内部控件。
+        const items = dialogFocusables(element);
+        /** 当前真实焦点可能位于预览引擎的 shadow root。 */
+        const active = deepActiveElement();
         const first = items[0];
         const last = items[items.length - 1];
         if (!first || !last) return;
-        if (event.shiftKey && document.activeElement === first) {
+        if (event.shiftKey && active === first) {
           event.preventDefault();
           last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
+        } else if (!event.shiftKey && active === last) {
           event.preventDefault();
           first.focus();
         }

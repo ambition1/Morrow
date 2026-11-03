@@ -16,3 +16,6 @@ data/
 backups/
 
 .deploy-locks/
+
+# 预览引擎运行资源由 Vite 从锁定依赖生成。
+public/file-viewer/

@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'node:path';
 
 export default defineConfig({
+  // MCP 无界面，不复制 Web 预览引擎的公共资源。
+  publicDir: false,
   build: {
     target: 'node20',
     ssr: true,

@@ -1,6 +1,21 @@
 import type { TranslationSchema } from '../types';
 
 export const pt: TranslationSchema = {
+  filePreview: {
+    open: 'Pré-visualizar',
+    mode: 'Modo de exibição',
+    side: 'Vista lateral',
+    inline: 'Vista incorporada',
+    window: 'Vista ampla',
+    readonly: 'Somente leitura',
+    loading: 'Carregando pré-visualização…',
+    failed: 'Não foi possível visualizar o arquivo. Você pode baixar o original.',
+    retry: 'Tentar novamente',
+    download: 'Baixar',
+    resize: 'Largura da prévia',
+    collapse: 'Fechar prévia',
+  },
+
   reliability: {
     title: 'Rascunhos e conflitos',
     found: 'Existem rascunhos locais não sincronizados.',

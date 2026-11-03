@@ -1,6 +1,21 @@
 import type { TranslationSchema } from '../types';
 
 export const es: TranslationSchema = {
+  filePreview: {
+    open: 'Vista previa',
+    mode: 'Modo de visualización',
+    side: 'Vista lateral',
+    inline: 'Vista integrada',
+    window: 'Vista amplia',
+    readonly: 'Solo lectura',
+    loading: 'Cargando vista previa…',
+    failed: 'No se pudo previsualizar el archivo. Puedes descargar el original.',
+    retry: 'Reintentar',
+    download: 'Descargar',
+    resize: 'Ancho de vista previa',
+    collapse: 'Cerrar vista previa',
+  },
+
   reliability: {
     title: 'Borradores y conflictos',
     found: 'Hay borradores locales sin sincronizar.',

@@ -362,6 +362,11 @@ export async function createApp({ dataDir, distDir }) {
     const mime = {
       '.html': 'text/html; charset=utf-8',
       '.js': 'text/javascript',
+      '.mjs': 'text/javascript',
+      '.wasm': 'application/wasm',
+      '.woff': 'font/woff',
+      '.ttf': 'font/ttf',
+      '.otf': 'font/otf',
       '.css': 'text/css',
       '.svg': 'image/svg+xml',
       '.png': 'image/png',
@@ -374,7 +379,7 @@ export async function createApp({ dataDir, distDir }) {
     if (!content) throw failure(404, '文件不存在。');
     response.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; frame-src blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; frame-src 'self' blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     );
     response.writeHead(200, {
       'Content-Type': mime[path.extname(target)] ?? 'application/octet-stream',

@@ -139,3 +139,36 @@ test('家庭共享无需登录、冲突保护、附件边界与重启恢复', as
     await fs.rm(temp, { recursive: true, force: true });
   }
 });
+
+/** 生产预览资源必须以正确 MIME 提供，防止模块 Worker 与流式 WASM 加载失败。 */
+test('附件预览静态 Worker、WASM 和字体 MIME', async () => {
+  /** 静态资源测试不读取用户笔记库。 */
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'morrow-preview-mime-'));
+  /** 各种实际运行资源扩展名对应的类型。 */
+  const types = {
+    'worker.mjs': 'text/javascript',
+    'decoder.wasm': 'application/wasm',
+    'font.woff': 'font/woff',
+    'font.ttf': 'font/ttf',
+    'font.otf': 'font/otf',
+  };
+  for (const name of Object.keys(types)) await fs.writeFile(path.join(temp, name), 'fixture');
+  /** 单独启动的静态服务实例。 */
+  const app = await createApp({ dataDir: path.join(temp, 'data'), distDir: temp });
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  try {
+    for (const [name, type] of Object.entries(types)) {
+      /** 响应头与内容必须同时正确，不能回退成 HTML。 */
+      const response = await fetch(`http://127.0.0.1:${app.address().port}/${name}`);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), type);
+      assert.match(response.headers.get('content-security-policy'), /worker-src 'self' blob:/);
+      assert.match(response.headers.get('content-security-policy'), /'wasm-unsafe-eval'/);
+      assert.equal(await response.text(), 'fixture');
+    }
+  } finally {
+    app.closeAllConnections();
+    await new Promise((resolve) => app.close(resolve));
+    await fs.rm(temp, { recursive: true, force: true });
+  }
+});

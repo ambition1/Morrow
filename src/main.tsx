@@ -21,6 +21,7 @@ import './app/styles/media-blocks.css';
 import './app/styles/insertion-menu.css';
 import './app/styles/reference-cards.css';
 import './app/styles/inline-date.css';
+import './app/styles/file-preview.css';
 import 'katex/dist/katex.min.css';
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';

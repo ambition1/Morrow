@@ -7,6 +7,21 @@ import type { TranslationSchema } from '../types';
 
 /** 简体中文词典，与英文词典保持键和插值参数一致。 */
 export const zhCN: TranslationSchema = {
+  filePreview: {
+    open: '预览',
+    mode: '显示方式',
+    side: '侧边预览',
+    inline: '内嵌预览',
+    window: '大窗预览',
+    readonly: '只读',
+    loading: '正在加载预览…',
+    failed: '暂时无法预览此文件，仍可下载原文件。',
+    retry: '重试',
+    download: '下载',
+    resize: '预览宽度',
+    collapse: '关闭预览',
+  },
+
   reliability: {
     title: '草稿与冲突处理',
     found: '发现本机尚未同步的草稿。',

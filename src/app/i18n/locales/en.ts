@@ -1,4 +1,19 @@
 export const en = {
+  filePreview: {
+    open: 'Preview',
+    mode: 'Display mode',
+    side: 'Side preview',
+    inline: 'Inline preview',
+    window: 'Large preview',
+    readonly: 'Read only',
+    loading: 'Loading preview…',
+    failed: 'This file could not be previewed. You can still download the original.',
+    retry: 'Retry',
+    download: 'Download',
+    resize: 'Preview width',
+    collapse: 'Close preview',
+  },
+
   reliability: {
     title: 'Drafts and conflicts',
     found: 'Unsynced drafts were found on this device.',

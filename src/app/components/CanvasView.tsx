@@ -1,3 +1,4 @@
+import { canPreview, closePreview, getPreview, openPreview } from '../preview/state';
 import {
   Eraser,
   FileText,
@@ -1422,6 +1423,13 @@ function PageCard({ pageId }: { pageId: PageId }) {
 function FileCard({ path }: { path: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const image = isImagePath(path);
+  /** 白板卡片卸载时释放其活动文件预览。 */
+  useEffect(
+    () => () => {
+      if (getPreview()?.id === path && !getPreview()?.host) closePreview();
+    },
+    [path],
+  );
   useEffect(() => {
     let live = true;
     if (image) void fileUrl(path).then((value) => live && setUrl(value));
@@ -1430,5 +1438,22 @@ function FileCard({ path }: { path: string }) {
     };
   }, [path, image]);
   if (image && url) return <img className="canvas-image" src={url} alt={path} draggable={false} />;
-  return <span className="canvas-file">{path.split('/').pop()}</span>;
+  return (
+    <div className="canvas-file-preview">
+      <span className="canvas-file">{path.split('/').pop()}</span>
+      {canPreview(path) && (
+        <button
+          type="button"
+          className="button small"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            openPreview({ id: path, name: path.split('/').pop() ?? path, trigger: event.currentTarget });
+          }}
+        >
+          {t('filePreview.open')}
+        </button>
+      )}
+    </div>
+  );
 }

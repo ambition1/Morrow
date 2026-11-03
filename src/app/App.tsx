@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { t } from './i18n';
+import { FilePreview } from './preview/FilePreview';
 import { webRecovery } from './platform/webRecovery';
 import { applyFonts } from './platform/fonts';
 import { useGlassLight } from './useGlassLight';
@@ -347,24 +348,27 @@ export function App() {
       <div className="scrim" aria-hidden="true" onClick={() => setUi({ mobileSidebar: false })} />
       <main className="main" id="main-content" tabIndex={-1}>
         <TabBar />
-        <div className={`panes${sideRoute ? ' is-split' : ''}`}>
-          <Pane
-            pane="main"
-            route={route}
-            active={!sideRoute || tabs.pane === 'main'}
-            style={sideRoute ? { flexGrow: prefs.splitShare } : undefined}
-          />
-          {sideRoute && (
-            <>
-              <SplitResizer />
-              <Pane
-                pane="side"
-                route={sideRoute}
-                active={tabs.pane === 'side'}
-                style={{ flexGrow: 1 - prefs.splitShare }}
-              />
-            </>
-          )}
+        <div className="file-preview-workspace">
+          <div className={`panes${sideRoute ? ' is-split' : ''}`}>
+            <Pane
+              pane="main"
+              route={route}
+              active={!sideRoute || tabs.pane === 'main'}
+              style={sideRoute ? { flexGrow: prefs.splitShare } : undefined}
+            />
+            {sideRoute && (
+              <>
+                <SplitResizer />
+                <Pane
+                  pane="side"
+                  route={sideRoute}
+                  active={tabs.pane === 'side'}
+                  style={{ flexGrow: 1 - prefs.splitShare }}
+                />
+              </>
+            )}
+          </div>
+          <FilePreview />
         </div>
       </main>
       {prefs.assistant && prefs.assistantOpen && desktop?.assistant && (

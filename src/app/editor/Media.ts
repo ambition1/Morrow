@@ -10,6 +10,7 @@ import { pickFiles } from '../platform/files';
 import { GALLERY_DRAG_TYPE, insertGallery, reorderGalleryImage } from './Gallery';
 import { openImageSettings, openImageViewer } from './MediaPanels';
 import type { ViewerImage } from './MediaPanels';
+import { canPreview, closePreview, openPreview } from '../preview/state';
 
 /** 图片节点复用既有附件，新增图注、宽度和对齐，不改变旧图默认显示。 */
 export const Image = Node.create({
@@ -374,47 +375,38 @@ export const FileAttachment = Node.create({
         void downloadFile(String(node.attrs.fileId ?? ''));
       });
       dom.append(name, meta, save);
-      // sound, video and pdfs play right on the page
-      const kind = mediaKind(String(node.attrs.name ?? ''));
-      if (!kind) return { dom };
+      /** 预览容器不进入文档结构，三种布局共用附件来源。 */
       const shell = document.createElement('div');
-      shell.className = `media-block media-${kind}`;
+      shell.className = 'attachment-preview-shell';
       shell.contentEditable = 'false';
-      const player =
-        kind === 'pdf'
-          ? document.createElement('iframe')
-          : document.createElement(kind === 'audio' ? 'audio' : 'video');
-      if (player instanceof HTMLMediaElement) {
-        player.controls = true;
-        player.preload = 'metadata';
-      } else {
-        player.title = String(node.attrs.name ?? 'PDF');
+      /** React portal 只挂到专用容器，不触碰附件卡片 DOM。 */
+      const host = document.createElement('div');
+      host.className = 'attachment-inline-host';
+      shell.append(dom, host);
+      if (canPreview(String(node.attrs.name ?? ''))) {
+        /** 所有支持类型都有统一入口，默认侧边打开。 */
+        const preview = document.createElement('button');
+        preview.type = 'button';
+        preview.className = 'file-save';
+        preview.textContent = t('filePreview.open');
+        preview.addEventListener('click', (event) => {
+          event.preventDefault();
+          openPreview({
+            id: String(node.attrs.fileId ?? ''),
+            name: String(node.attrs.name ?? ''),
+            host,
+            trigger: preview,
+          });
+        });
+        dom.insertBefore(preview, save);
       }
-      dom.classList.add('is-compact');
-      // 预览由用户主动打开，附件卡片保持紧凑。
-      const preview = document.createElement('button');
-      preview.type = 'button';
-      preview.className = 'file-save';
-      preview.textContent = t('mediaBlocks.preview');
-      preview.setAttribute('aria-expanded', 'false');
-      player.hidden = true;
-      preview.addEventListener('click', (event) => {
-        event.preventDefault();
-        player.hidden = !player.hidden;
-        preview.setAttribute('aria-expanded', String(!player.hidden));
-      });
-      dom.insertBefore(preview, save);
-      shell.append(player, dom);
-      void fileUrl(String(node.attrs.fileId ?? '')).then((url) => {
-        if (url) player.src = url;
-        else shell.classList.add('is-missing');
-      });
       return {
         dom: shell,
         stopEvent: (event) =>
-          event.target === player ||
-          (event.target instanceof HTMLElement && Boolean(event.target.closest('button'))),
+          event.target instanceof HTMLElement &&
+          Boolean(event.target.closest('button,.attachment-inline-host')),
         ignoreMutation: () => true,
+        destroy: () => closePreview(host),
       };
     };
   },
