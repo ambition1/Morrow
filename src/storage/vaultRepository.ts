@@ -172,7 +172,154 @@ export class VaultRepository implements WorkspaceRepository {
     await this.write({ pages: [], docs: [], removed: [], state: this.lastState });
   }
 
+  /** 只为 Web 的纯正文与访问时间保留重新生成批次的机会。 */
   async write(batch: WriteBatch): Promise<void> {
+    if (!batch.rebaseable || !this.bridge.fork) return this.writeBatch(batch);
+    /** 版本拒绝发生于任何落盘之前，丢弃试写时修改的渲染缓存。 */
+    const sources = new Map(this.sources);
+    /** 写入统计由采用的服务器快照重新计算。 */
+    const days = new Map(this.days);
+    try {
+      await this.writeBatch(batch);
+    } catch (error) {
+      if (!(error as { staleVault?: boolean }).staleVault) throw error;
+      this.sources = sources;
+      this.days.clear();
+      for (const [day, count] of days) this.days.set(day, count);
+      await this.rebaseWebWrite(batch, error);
+    }
+  }
+
+  /** 对整库版本冲突从最新版重新生成文件操作，保留共享索引及其他页面。 */
+  private async rebaseWebWrite(batch: WriteBatch, stale: unknown): Promise<void> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      /** 新版本在独立桥接上使用，活动镜像中的未保存页面不会被推进。 */
+      const bridge = this.bridge.fork?.();
+      if (!bridge) throw stale;
+      /** 独立仓库提供一致的索引、路径、原始文本和历史。 */
+      const fresh = new VaultRepository(bridge, this.newId);
+      try {
+        /** 服务器快照用于判断目标是否仍处于原来的位置与状态。 */
+        const loaded = await fresh.load();
+        if (!loaded.ok || !fresh.lastState) throw stale;
+        /** 最新页属性与正文各自保留，只有本次提交涉及的字段会替换。 */
+        const pages = { ...fresh.lastState.pages };
+        /** 本次提交采用服务器的其他正文。 */
+        const docs = { ...fresh.lastState.docs };
+        /** 仅正文编辑要求相同的原始文件内容。 */
+        const edited = new Set(batch.docs.map(({ id }) => id));
+        for (const local of batch.pages) {
+          /** 目标改名、回收、加密或改类型都使重建失效。 */
+          const remote = pages[local.id];
+          /** 文件必须已经存在，避免重建一个被删除或尚未创建的页面。 */
+          const placement = this.layout.get(local.id);
+          if (
+            !remote ||
+            !placement ||
+            this.pathOf(local.id) !== fresh.pathOf(local.id) ||
+            remote.parentId !== local.parentId ||
+            remote.kind !== local.kind ||
+            remote.trashedAt !== local.trashedAt ||
+            remote.encrypted !== local.encrypted ||
+            (edited.has(local.id) &&
+              (!placement.file ||
+                local.kind !== 'page' ||
+                local.encrypted ||
+                local.trashedAt !== null ||
+                (remote.parentId && pages[remote.parentId]?.kind === 'database') ||
+                !this.texts.has(local.id) ||
+                this.texts.get(local.id) !== fresh.texts.get(local.id) ||
+                !docs[local.id]))
+          )
+            throw Object.assign(new Error(errorMessage(stale)), { status: 409, pageId: local.id });
+          pages[local.id] = {
+            ...remote,
+            lastOpenedAt: Math.max(remote.lastOpenedAt ?? 0, local.lastOpenedAt ?? 0) || null,
+            updatedAt: edited.has(local.id) ? local.updatedAt : remote.updatedAt,
+          };
+        }
+        for (const { id, doc } of batch.docs) {
+          if (!batch.pages.some((page) => page.id === id)) throw stale;
+          docs[id] = doc;
+        }
+        await fresh.writeBatch({
+          ...batch,
+          pages: batch.pages.map(({ id }) => pages[id]!),
+          state: { pages, docs },
+        });
+        for (const { id } of batch.docs) {
+          /** 只推进此次已落盘的正文基准，其他页面继续使用原始基准。 */
+          const text = fresh.texts.get(id);
+          if (text !== undefined) this.texts.set(id, text);
+        }
+        return;
+      } catch (error) {
+        if (error === stale || !(error as { staleVault?: boolean }).staleVault || attempt === 1) throw error;
+      } finally {
+        fresh.close();
+      }
+    }
+  }
+
+  /** 从独立桥接读取远端快照，只在调用方确认干净时同步缓存与版本。 */
+  async refreshWeb(accept: (patch: ExternalPatch, adopt: () => void) => boolean): Promise<boolean> {
+    /** 已解锁的页面包含仅保存在本机内存的密钥，继续沿用原镜像。 */
+    if (!this.bridge.adoptRevision || !this.bridge.fork || this.keys.size || this.bridge.isWriting?.())
+      return false;
+    /** 记录读快照之前的版本，避免旧读取覆盖本机会话的新提交。 */
+    const base = this.bridge.getRevision?.();
+    /** 此桥接独立持有读取快照时的版本。 */
+    const bridge = this.bridge.fork();
+    /** 独立读取不改当前路径或保存基准。 */
+    const fresh = new VaultRepository(bridge, this.newId);
+    try {
+      /** 快照的解析结果与桥接版本来自同一次扫描。 */
+      const loaded = await fresh.load();
+      /** 服务器在快照中返回的新版本。 */
+      const revision = bridge.getRevision?.();
+      if (
+        !loaded.ok ||
+        !revision ||
+        this.bridge.getRevision?.() !== base ||
+        this.keys.size ||
+        this.bridge.isWriting?.()
+      )
+        return false;
+      /** 创建删除集合时使用当前会话，而非上次提交缓存。 */
+      const current = this.currentState()?.pages ?? {};
+      /** 服务端仍存在的页面 ID。 */
+      const ids = new Set(loaded.value.pages.map(({ id }) => id));
+      /** 一次性替换读取到的页面、正文及可读状态。 */
+      const patch: ExternalPatch = {
+        pages: loaded.value.pages,
+        docs: loaded.value.docs,
+        removed: Object.keys(current).filter((id) => !ids.has(id)),
+        unreadable: loaded.value.unreadable,
+        readable: [...ids].filter((id) => !fresh.locked.has(id)),
+      };
+      return accept(patch, () => {
+        this.layout = fresh.layout;
+        this.sources = fresh.sources;
+        this.texts = fresh.texts;
+        this.folderOnly = fresh.folderOnly;
+        this.reserved = fresh.reserved;
+        this.locked = fresh.locked;
+        this.others = fresh.others;
+        this.registryText = fresh.registryText;
+        this.recentText = fresh.recentText;
+        this.registryDirty = fresh.registryDirty;
+        this.lastState = fresh.lastState;
+        this.days.clear();
+        for (const [day, count] of fresh.days) this.days.set(day, count);
+        this.bridge.adoptRevision?.(revision);
+      });
+    } finally {
+      fresh.close();
+    }
+  }
+
+  /** 构建并写入一次批次，版本拒绝由外层处理。 */
+  private async writeBatch(batch: WriteBatch): Promise<void> {
     const state = batch.state ?? this.lastState;
     if (!state) throw new Error('Nothing to write yet.');
     this.lastState = state;
@@ -432,6 +579,7 @@ export class VaultRepository implements WorkspaceRepository {
           status: 409,
           current: failed.current,
           path: 'path' in op ? op.path : op.from,
+          pageId: op.op === 'write' ? op.id : undefined,
         });
       }
       if (!failed.ok && failed.code === 'conflict' && op.op === 'write' && op.id) {

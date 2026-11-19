@@ -95,6 +95,7 @@ function useLifecycle() {
   useEffect(() => {
     const session = getSession();
     const flush = () => {
+      if (webRecovery?.safeToReload) return;
       commitEditors();
       void session.flush();
     };

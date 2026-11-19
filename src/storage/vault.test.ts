@@ -5,6 +5,8 @@ import type { DocNode, PageId } from '../core/model';
 import { sampleCommands } from '../core/sample';
 import { MemoryVault } from './memoryVault';
 import { WorkspaceSession } from './session';
+import type { VaultBridge } from './vaultBridge';
+
 import { VaultRepository } from './vaultRepository';
 
 let counter = 0;
@@ -405,5 +407,121 @@ describe('encrypted pages in files', () => {
     expect(vault.text('Diary.md')).toBe('---\ntags: [private]\n---\nThird secret.\n');
     await session.close();
     await reopened.close();
+  });
+});
+
+describe('Web 正文并发保存', () => {
+  /** 为每个客户端生成独立版本，底层文件与服务端版本共享。 */
+  async function sharedWeb() {
+    /** 两页都已落盘，重建不会复用原客户端的整库记录。 */
+    const disk = new MemoryVault({ 'Alpha.md': 'Alpha base\n', 'Beta.md': 'Beta base\n' });
+    /** 模拟服务器先检查整库版本，再执行文件期望值检查。 */
+    let revision = 0;
+    /** 独立桥接直到扫描或写入成功才更新自己的版本。 */
+    function client(): VaultBridge {
+      /** 此客户端的写入基准。 */
+      let version = 0;
+      return {
+        root: disk.root,
+        strictConflicts: true,
+        fork: client,
+        getRevision: () => String(version),
+        adoptRevision: (value) => {
+          version = Number(value);
+        },
+        scan: async () => {
+          version = revision;
+          return disk.scan();
+        },
+        apply: async (ops) => {
+          if (version !== revision)
+            throw Object.assign(new Error('stale'), { status: 409, staleVault: true });
+          version = ++revision;
+          return disk.apply(ops);
+        },
+        readText: (path) => disk.readText(path),
+        readBytes: (path) => disk.readBytes(path),
+        createFile: (path, data) => disk.createFile(path, data),
+        exists: (path) => disk.exists(path),
+        listFiles: (dir) => disk.listFiles(dir),
+        onChange: () => () => {},
+        fileUrl: () => null,
+      };
+    }
+    /** 由会话记录命令类型并进行真实的保存队列写入。 */
+    async function openWeb() {
+      /** 仓库使用独立版本，与其他会话共享同一份硬盘模拟。 */
+      const repository = new VaultRepository(client(), newId);
+      /** 长延时使测试显式控制竞态。 */
+      const opened = await WorkspaceSession.open(repository, { delayMs: 60_000 });
+      if (!opened.ok) throw new Error(opened.error);
+      return { repository, session: opened.value };
+    }
+    /** 第一浏览器建立稳定 ID 索引。 */
+    const first = await openWeb();
+    await first.session.markInitialized();
+    return { disk, first, second: await openWeb() };
+  }
+
+  it('不同页保存保留双方正文与索引，干净会话能接收远端正文', async () => {
+    /** 两个会话加载同一个服务器版本。 */
+    const { disk, first, second } = await sharedWeb();
+    /** 修改页面与对端打开的页面互不重叠。 */
+    const a = idOf(first.session, 'Alpha');
+    /** 第二会话编辑独立页面。 */
+    const b = idOf(second.session, 'Beta');
+    first.session.execute({ type: 'page.setDoc', id: a, doc: doc('From one'), now: 1 });
+    second.session.execute({ type: 'page.setDoc', id: b, doc: doc('From two'), now: 2 });
+    expect(await first.session.flush()).toBe(true);
+    expect(await second.session.flush()).toBe(true);
+    expect(disk.text('Alpha.md')).toContain('From one');
+    expect(disk.text('Beta.md')).toContain('From two');
+    expect(disk.text('.morrow/workspace.json')).toContain(a);
+    expect(disk.text('.morrow/workspace.json')).toContain(b);
+    /** 读取远端差异之前的会话对象。 */
+    const before = first.session.getState();
+    expect(
+      await first.repository.refreshWeb((patch, adopt) =>
+        first.session.acceptWebSnapshot(patch, before, adopt),
+      ),
+    ).toBe(true);
+    expect(first.session.getState().docs[b]).toEqual(doc('From two'));
+  });
+
+  it('同页修改保留本机编辑和服务器正文，阻止采用远端快照', async () => {
+    /** 两边从同一个页面版本开始。 */
+    const { disk, first, second } = await sharedWeb();
+    /** 同一个页 ID 用于识别冲突归属。 */
+    const id = idOf(first.session, 'Alpha');
+    first.session.execute({ type: 'page.setDoc', id, doc: doc('Server'), now: 1 });
+    second.session.execute({ type: 'page.setDoc', id, doc: doc('Local'), now: 2 });
+    expect(await first.session.flush()).toBe(true);
+    expect(await second.session.flush()).toBe(false);
+    expect(second.session.saveStatus).toMatchObject({ state: 'conflict', conflictPageId: id, failures: 1 });
+    expect(await second.session.flush()).toBe(false);
+    expect(second.session.saveStatus.failures).toBe(1);
+    /** 有本机编辑时不采用已经读取的快照。 */
+    const before = second.session.getState();
+    expect(
+      await second.repository.refreshWeb((patch, adopt) =>
+        second.session.acceptWebSnapshot(patch, before, adopt),
+      ),
+    ).toBe(false);
+    expect(second.session.getState().docs[id]).toEqual(doc('Local'));
+    expect(disk.text('Alpha.md')).toContain('Server');
+  });
+
+  it('服务端移动页面后，陈旧正文不重新创建旧路径', async () => {
+    /** 第二浏览器准备在旧路径写入。 */
+    const { disk, first, second } = await sharedWeb();
+    /** 目标页面改名后保留原 ID。 */
+    const id = idOf(first.session, 'Alpha');
+    second.session.execute({ type: 'page.setDoc', id, doc: doc('Local'), now: 2 });
+    first.session.execute({ type: 'page.rename', id, title: 'Renamed', now: 3 });
+    expect(await first.session.flush()).toBe(true);
+    expect(await second.session.flush()).toBe(false);
+    expect(disk.text('Alpha.md')).toBeUndefined();
+    expect(disk.text('Renamed.md')).toContain('Alpha base');
+    expect(second.session.getState().docs[id]).toEqual(doc('Local'));
   });
 });

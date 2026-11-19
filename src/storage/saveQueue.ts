@@ -10,6 +10,8 @@ export interface SaveStatus {
   lastSavedAt: number | null;
   error: string | null;
   failures: number;
+  /** 识别到目标页面时单独标记，避免其他页面也显示为正文冲突。 */
+  conflictPageId?: PageId;
 }
 
 export interface SaveQueueOptions {
@@ -19,7 +21,7 @@ export interface SaveQueueOptions {
   beforeProtect?: (pageId: PageId) => Promise<void>;
   /** 取消加密成功后才能重新启用明文草稿。 */
   afterUnprotect?: (pageId: PageId) => Promise<void>;
-  onEnqueue?: (changes: Changes, state: WorkspaceState) => void;
+  onEnqueue?: (changes: Changes, state: WorkspaceState, navigationOnly: boolean) => void;
   /** 服务器写入前确认本次正文已持久保存在本机。 */
   beforeWrite?: (batch: WriteBatch) => Promise<unknown>;
   /** 只清理已确认写入的同一代草稿。 */
@@ -47,6 +49,8 @@ export class SaveQueue {
   private writing = new Set<PageId>();
   /** 快速记录跨本机检查点时暂缓新的服务器批次。 */
   private holds = 0;
+  /** 当前排队命令是否只含正文或访问时间。 */
+  private rebaseable = true;
 
   /** 本机持久化操作完成后释放；重复释放无副作用。 */
   hold(): () => void {
@@ -92,8 +96,14 @@ export class SaveQueue {
     return this.dirtyPages.size + this.dirtyDocs.size + this.removed.size > 0 || this.inFlight !== null;
   }
 
-  enqueue(changes: Changes): void {
-    this.options.onEnqueue?.(changes, this.getState());
+  /** 持有本机检查点时仍有编辑活动，即使服务器队列暂时为空。 */
+  isIdle(): boolean {
+    return this.holds === 0 && !this.hasPending();
+  }
+
+  enqueue(changes: Changes, rebaseable = false, navigationOnly = false): void {
+    if (changes.pages.size || changes.docs.size || changes.removed.size) this.rebaseable &&= rebaseable;
+    this.options.onEnqueue?.(changes, this.getState(), navigationOnly);
     for (const id of changes.pages) this.dirtyPages.add(id);
     for (const id of changes.docs) this.dirtyDocs.add(id);
     for (const id of changes.removed) {
@@ -110,9 +120,10 @@ export class SaveQueue {
   // writes everything outstanding now, resolves true when nothing is left unsaved
   async flush(): Promise<boolean> {
     this.clearTimer();
-    if (this.holds > 0) return false;
+    if (this.holds > 0 || this.current.state === 'conflict') return false;
     while (this.inFlight) await this.inFlight;
-    if (this.holds > 0) return false;
+    // 等待前一批完成期间可能已进入冲突，切换标签或退出也不重试。
+    if (this.holds > 0 || this.status.state === 'conflict') return false;
     if (this.dirtyPages.size + this.dirtyDocs.size + this.removed.size > 0) {
       this.inFlight = this.writeOnce();
       await this.inFlight;
@@ -136,7 +147,9 @@ export class SaveQueue {
     this.setStatus({ ...this.current, state: 'saving' });
 
     const state = this.getState();
-    const batch: WriteBatch = { pages: [], docs: [], removed: [], state };
+    /** 保留捕获批次的命令范围，后续输入另行记录。 */
+    const batch: WriteBatch = { pages: [], docs: [], removed: [], state, rebaseable: this.rebaseable };
+    this.rebaseable = true;
     for (const id of pages) {
       const page = state.pages[id];
       if (page) batch.pages.push(page);
@@ -168,6 +181,7 @@ export class SaveQueue {
       });
       if (more) this.schedule(this.delayMs);
     } catch (error) {
+      this.rebaseable &&= Boolean(batch.rebaseable);
       // put the ids back so the next attempt writes the latest version of each record
       for (const id of pages) if (!this.removed.has(id)) this.dirtyPages.add(id);
       for (const id of docs) if (!this.removed.has(id)) this.dirtyDocs.add(id);
@@ -179,6 +193,7 @@ export class SaveQueue {
         state: (error as { status?: number }).status === 409 ? 'conflict' : 'error',
         error: errorMessage(error),
         failures: this.current.failures + 1,
+        conflictPageId: (error as { pageId?: PageId }).pageId,
       });
       if (this.current.state !== 'conflict') this.schedule(this.retryDelay());
     }

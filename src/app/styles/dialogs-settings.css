@@ -665,9 +665,27 @@
 }
 
 /* 草稿对比使用既有表单材质，正文区域保留多行可读高度。 */
+/* 恢复需要阅读两份正文，实色浮层避免背后的笔记透出干扰对比。 */
+.dialog.recovery-dialog {
+  background: var(--popover);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .recovery-dialog .field {
   margin-block: var(--space-3);
 }
+/* 桌面并排比较两个版本，窄屏按阅读顺序纵向堆叠。 */
+.recovery-dialog .recovery-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.recovery-dialog .recovery-compare .field {
+  margin-block-start: 0;
+}
+
 .recovery-dialog textarea.text-input {
   height: auto;
   min-height: 120px;
@@ -687,6 +705,11 @@
   max-width: 100%;
 }
 @media (max-width: 700px) {
+  .recovery-dialog .recovery-compare {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
   .recovery-dialog textarea.text-input {
     font-size: 16px;
   }
@@ -697,4 +720,73 @@
   height: auto;
   min-height: 120px;
   width: 100%;
+}
+
+/* 正文差异复用主题分隔线与语义背景，增删同时显示符号和版次。 */
+.recovery-dialog .recovery-hunk {
+  min-inline-size: 0;
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.recovery-dialog .recovery-hunk legend {
+  padding-inline: var(--space-2);
+  font-weight: 600;
+}
+
+.recovery-dialog .recovery-diff-side {
+  min-width: 0;
+}
+
+.recovery-dialog .recovery-diff-lines {
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2);
+  max-height: 12rem;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: var(--text-sm) / 1.55 var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.recovery-dialog .is-removed {
+  background: var(--danger-soft);
+}
+
+.recovery-dialog .is-added {
+  background: var(--c-green);
+}
+
+.recovery-dialog .recovery-diff-lines > span {
+  display: grid;
+  grid-template-columns: minmax(3ch, auto) minmax(0, 1fr);
+  column-gap: var(--space-2);
+}
+
+.recovery-dialog .recovery-diff-lines > span > span {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.recovery-dialog .recovery-diff-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.recovery-dialog .recovery-diff-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .recovery-dialog .recovery-diff-options label {
+    min-height: 44px;
+  }
 }

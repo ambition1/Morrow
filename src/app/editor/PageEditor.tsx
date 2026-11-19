@@ -7,7 +7,7 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { Node as ProseNode, Slice } from '@tiptap/pm/model';
 import { EditorContent } from '@tiptap/react';
 import katex from 'katex';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { docToMarkdown } from '../../core/markdown/serialize';
@@ -311,8 +311,8 @@ export function PageEditor({ pageId, doc, editable, find, anchor, onExitTop, onD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
-  // content changed outside this editor, for example a task ticked in the tasks view
-  useEffect(() => {
+  /** 外部正文在绘制前同步，避免以旧编辑器内容发起新修改。 */
+  useLayoutEffect(() => {
     if (!editor || editor.isDestroyed || doc === committed.current) return;
     committed.current = doc;
     editor.commands.setContent(doc as JSONContent, { emitUpdate: false });

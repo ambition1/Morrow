@@ -29,8 +29,7 @@ import { sampleCommands } from './core/sample';
 import { startRecurring } from './app/recurring';
 import { WorkspaceSession } from './storage/session';
 import { WebRecovery, setWebRecovery } from './app/platform/webRecovery';
-import { webRequest } from './app/platform/webVault';
-import { webVaultBridge } from './app/platform/webVault';
+import { watchWebWorkspace, webRequest, webVaultBridge } from './app/platform/webVault';
 import { applyFonts } from './app/platform/fonts';
 import { localizeError } from './app/i18n/errors';
 import { t, tp } from './app/i18n';
@@ -38,14 +37,14 @@ import { VaultRepository } from './storage/vaultRepository';
 import { App } from './app/App';
 import { Logo } from './app/components/primitives';
 import { VaultChooser } from './app/components/VaultChooser';
-import { commitEditors } from './app/editor/commits';
+import { commitEditors, isEditorComposing } from './app/editor/commits';
 import { COPY_LEGACY_KEY, copyLegacyInto, legacyPageCount } from './app/legacy';
 import { desktop } from './app/platform/desktop';
 import { newId } from './app/platform/files';
 import { desktopVaultBridge } from './app/platform/vault';
 import { resolvedTheme, getPreferences } from './app/platform/preferences';
-import { toast, setUi } from './app/ui';
-import { setSession } from './app/workspace';
+import { getUi, toast, setUi } from './app/ui';
+import { getSession, setSession } from './app/workspace';
 
 type BootState =
   | { kind: 'loading' }
@@ -81,7 +80,9 @@ async function openWorkspace(): Promise<BootState> {
   const opened = await WorkspaceSession.open(repository, {
     beforeProtect: (id) => recovery?.setEncrypted(id, true) ?? Promise.resolve(),
     afterUnprotect: (id) => recovery?.setEncrypted(id, false) ?? Promise.resolve(),
-    onEnqueue: (changes, state) => recovery?.enqueue(changes, state),
+    onEnqueue: (changes, state, navigationOnly) => {
+      if (!navigationOnly) recovery?.enqueue(changes, state);
+    },
     beforeWrite: (batch) => recovery?.beforeWrite(batch) ?? Promise.resolve([]),
     afterWrite: (batch, token) => recovery?.afterWrite(batch, token) ?? Promise.resolve(),
   });
@@ -122,6 +123,40 @@ async function openWorkspace(): Promise<BootState> {
   }
   await session.markInitialized();
   setSession(session);
+  if (webBridge && recovery) {
+    /** 同一次快照采用必须仍属于当前会话。 */
+    const drafts = recovery;
+    const checkRemote = watchWebWorkspace(webBridge, async () => {
+      if (isEditorComposing()) return false;
+      commitEditors();
+      /** 有输入、草稿恢复窗口或写入未完成时保持当前版本。 */
+      const clean = () => {
+        /** 当前浏览器的恢复记录及事务状态。 */
+        const status = drafts.getStatus();
+        return (
+          getSession() === session &&
+          !getUi().dialog &&
+          !isEditorComposing() &&
+          session.queue.isIdle() &&
+          !status.error &&
+          !status.pending &&
+          !status.drafts.some((draft) => drafts.ownsDraft(draft)) &&
+          !status.capture
+        );
+      };
+      if (!clean()) return false;
+      /** 再次检查时可发现请求途中开始编辑的会话。 */
+      const before = session.getState();
+      const accepted = await repository.refreshWeb(
+        (patch, adopt) => clean() && session.acceptWebSnapshot(patch, before, adopt),
+      );
+      if (accepted) drafts.adoptBase(session.getState());
+      return accepted;
+    });
+    session.queue.subscribe(() => {
+      if (session.queue.status.state === 'saved') queueMicrotask(checkRemote);
+    });
+  }
   startRecurring();
   if (session.problems.length > 0) {
     console.warn('Morrow could not read some stored records:', session.problems);

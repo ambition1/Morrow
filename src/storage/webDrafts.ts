@@ -4,6 +4,7 @@
  * 创建时间：2026-10-30 16:42:00
  */
 import { openDB } from 'idb';
+import { newId } from '../app/platform/files';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import type { DocNode, PageId, PageMeta } from '../core/model';
 import type { StoredFile } from './repository';
@@ -77,7 +78,7 @@ export interface WebDraftStore {
 
 /** 每次页面启动生成新身份，复制标签页也不会共享会话存储身份。 */
 export function createDraftOwner(): string {
-  return crypto.randomUUID();
+  return newId();
 }
 
 /** 打开命名空间内的持久化草稿；不可用或容量不足时直接拒绝。 */

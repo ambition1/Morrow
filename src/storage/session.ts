@@ -1,3 +1,4 @@
+import { newId } from '../app/platform/files';
 import { applyCommand } from '../core/commands';
 import type { Command } from '../core/commands';
 import { isDocEmpty } from '../core/doc';
@@ -154,7 +155,11 @@ export class WorkspaceSession {
     for (const page of patch.pages) {
       if (this.queue.isDirty(page.id)) continue;
       pages[page.id] = page;
-      if (patch.docs[page.id]) docs[page.id] = patch.docs[page.id]!;
+      /** 未改变的正文保留对象身份，避免无关页面更新重置编辑器。 */
+      const doc = patch.docs[page.id];
+      if (doc && (docs[page.id] === undefined || JSON.stringify(doc) !== JSON.stringify(docs[page.id])))
+        docs[page.id] = doc;
+      if (!doc && patch.unreadable.includes(page.id)) delete docs[page.id];
       accepted.push(page.id);
     }
     for (const id of patch.removed) {
@@ -172,6 +177,15 @@ export class WorkspaceSession {
     }
     for (const listener of this.externalListeners) listener(patch, accepted);
     return accepted;
+  }
+
+  /** 采用完整 Web 快照，替换前再次提交编辑器内尚未入队的修改。 */
+  acceptWebSnapshot(patch: ExternalPatch, before: WorkspaceState, adopt: () => void): boolean {
+    this.beforeExternal();
+    if (!this.queue.isIdle() || this.state !== before) return false;
+    adopt();
+    this.applyExternal(patch);
+    return true;
   }
 
   static async open(
@@ -220,7 +234,12 @@ export class WorkspaceSession {
     const { state, changes } = result.value;
     if (state === this.state) return ok(state);
     this.state = state;
-    this.queue.enqueue(changes);
+    this.queue.enqueue(
+      changes,
+      command.type === 'page.markOpened' ||
+        (command.type === 'page.setDoc' && state.pages[command.id]?.kind === 'page'),
+      command.type === 'page.markOpened',
+    );
     for (const listener of this.listeners) listener();
     return ok(state);
   }
@@ -376,9 +395,10 @@ export class WorkspaceSession {
     });
   }
 
+  /** 为页面正文创建兼容局域网 HTTP 的独立历史快照。 */
   private snapshotOf(pageId: PageId, state: WorkspaceState, now: number): Snapshot {
     return {
-      id: crypto.randomUUID(),
+      id: newId(),
       pageId,
       title: state.pages[pageId]?.title ?? '',
       doc: state.docs[pageId] as DocNode,
