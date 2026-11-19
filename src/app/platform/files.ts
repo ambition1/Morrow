@@ -32,8 +32,9 @@ export function pickFiles(accept: string, multiple: boolean): Promise<File[]> {
   });
 }
 
+/** 生成页面、草稿与历史标识，兼容局域网 HTTP 缺少 randomUUID 的浏览器。 */
 export function newId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 

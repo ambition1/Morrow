@@ -26,7 +26,7 @@ export function Dialogs() {
   if (!dialog) return null;
   switch (dialog.kind) {
     case 'recovery':
-      return <RecoveryDialog />;
+      return <RecoveryDialog pageId={dialog.pageId} />;
     case 'settings':
       return <SettingsDialog section={dialog.section} />;
     case 'shortcuts':

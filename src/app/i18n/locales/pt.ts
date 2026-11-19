@@ -2,6 +2,26 @@ import type { TranslationSchema } from '../types';
 
 export const pt: TranslationSchema = {
   reliability: {
+    useLocal: 'Usar a versão local inteira',
+    diffTitle: 'Diferenças de conteúdo',
+    noDiff: 'As duas versões têm o mesmo Markdown.',
+    diffHunk: 'Alteração {number}',
+    noLines: 'Sem linhas neste lado',
+    chooseServer: 'Usar linhas do servidor',
+    chooseLocal: 'Usar linhas locais',
+    chooseBoth: 'Manter ambas',
+    mergePreview: 'Prévia da mesclagem',
+    editMerge: 'Editar a prévia',
+    backToChoices: 'Voltar às opções',
+    chooseRemaining: 'Alterações a revisar: {count}.',
+    diffTruncated:
+      'As alterações longas mostram apenas as primeiras linhas aqui. A prévia inclui o texto completo.',
+    pageTitle: 'Rascunhos e conflitos de {title}',
+    reviewAll: 'Ver todos os rascunhos',
+    emptyPage: 'Não há rascunhos para recuperar nesta página.',
+    thisTab: 'Esta aba',
+    otherTab: 'Outra sessão neste navegador',
+    workspaceChanged: 'Há uma atualização da biblioteca',
     title: 'Rascunhos e conflitos',
     found: 'Existem rascunhos locais não sincronizados.',
     review: 'Ver rascunhos',
@@ -48,10 +68,10 @@ export const pt: TranslationSchema = {
   },
   web: {
     shortcutsHelp: '{shortcutDaily} opens today’s note. Shortcuts work within this browser tab.',
-    changed: 'Your vault changed on another device. Copy any unsaved content and reload before editing.',
+    changed: 'A biblioteca foi alterada em outro dispositivo. As alterações pendentes ficam neste navegador.',
     storageName: 'Espaço familiar compartilhado',
     storageHelp:
-      'Todos os dispositivos compartilham páginas, arquivos e histórico. Qualquer pessoa com acesso a este endereço pode ver e editar. Copie alterações não salvas antes de atualizar e exporte backups.',
+      'Os dispositivos compartilham as notas, os anexos e o histórico salvos no servidor. Os rascunhos não sincronizados ficam neste navegador.',
     requestFailed: 'A solicitação falhou. Verifique a conexão e tente novamente.',
     aboutFooter:
       'A edição web abre um espaço familiar sem contas. Qualquer pessoa com acesso a este endereço pode ver e editar seu conteúdo.',

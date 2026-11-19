@@ -24,6 +24,14 @@ export interface VaultBridge {
   readonly root: string;
   /** Web 冲突必须交给用户处理，不能自动重放覆盖磁盘正文。 */
   readonly strictConflicts?: boolean;
+  /** Web 独立读取和写入使用自己的版本，成功后可由活动桥接采纳。 */
+  fork?(): VaultBridge;
+  /** 读取本桥接写入所使用的服务器版本。 */
+  getRevision?(): string;
+  /** 是否有等待或正在执行的 Web 写入。 */
+  isWriting?(): boolean;
+  /** 已确认采用该快照时同步写入版本。 */
+  adoptRevision?(revision: string): void;
   scan(): Promise<VaultScan>;
   // runs operations in order and stops at the first one that fails, the result has one entry per attempt
   apply(ops: VaultOp[]): Promise<VaultOpResult[]>;

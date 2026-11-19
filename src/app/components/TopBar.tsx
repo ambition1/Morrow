@@ -12,7 +12,7 @@ import {
   Star,
   X,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { displayTitle } from '../i18n/labels';
 import type { PageMeta } from '../../core/model';
@@ -99,7 +99,7 @@ function SplitButtons() {
   );
 }
 
-export function SaveIndicator({ editing }: { editing: boolean }) {
+export function SaveIndicator({ editing, pageId }: { editing: boolean; pageId?: string }) {
   const { t } = useTranslation();
   const status = useSaveStatus();
   /** 桌面使用稳定空值，Web 显示真实本机事务状态。 */
@@ -107,6 +107,20 @@ export function SaveIndicator({ editing }: { editing: boolean }) {
     webRecovery?.subscribe ?? (() => () => {}),
     webRecovery?.getStatus ?? (() => null),
   );
+  /** 当前页与整库入口根据实际待处理的草稿决定。 */
+  const pageDraft = pageId && recovery?.drafts.some((draft) => draft.pageId === pageId);
+  /** 工作区级失败无当前页草稿时使用库级提示。 */
+  const conflictLabel = t(
+    pageDraft && (!status.conflictPageId || status.conflictPageId === pageId)
+      ? 'reliability.conflict'
+      : 'reliability.workspaceChanged',
+  );
+  /** 打开对应上下文，其他页面的草稿可经全局入口查看。 */
+  const openRecovery = (event: MouseEvent<HTMLButtonElement>, scope: string | null | undefined = pageId) => {
+    // Safari 点击按钮不一定自动聚焦，关闭后仍应返回这个入口。
+    event.currentTarget.focus();
+    setUi({ dialog: { kind: 'recovery', pageId: scope ?? undefined } });
+  };
   const [, tick] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => tick((n) => n + 1), 30_000);
@@ -122,22 +136,22 @@ export function SaveIndicator({ editing }: { editing: boolean }) {
       <button
         type="button"
         className="save-status is-error"
-        title={recovery?.error ? t('reliability.localUnavailable') : t('reliability.conflict')}
+        title={recovery?.error ? t('reliability.localUnavailable') : conflictLabel}
         aria-label={
           recovery?.error
             ? t('reliability.localUnavailable')
             : status.state === 'conflict'
-              ? t('reliability.conflict')
+              ? conflictLabel
               : t('reliability.localSaved')
         }
-        onClick={() => setUi({ dialog: { kind: 'recovery' } })}
+        onClick={(event) => openRecovery(event)}
       >
         <AlertTriangle size={14} />
         <span className="save-label">
           {recovery?.error
             ? t('topBar.saveFailed')
             : status.state === 'conflict'
-              ? t('reliability.conflict')
+              ? conflictLabel
               : t('reliability.localSaved')}
         </span>
       </button>
@@ -145,8 +159,12 @@ export function SaveIndicator({ editing }: { editing: boolean }) {
   }
   if (recovery?.drafts.length && status.state === 'saved') {
     return (
-      <button type="button" className="save-status" onClick={() => setUi({ dialog: { kind: 'recovery' } })}>
-        {t('reliability.review')}
+      <button
+        type="button"
+        className="save-status"
+        onClick={(event) => openRecovery(event, pageDraft ? pageId : null)}
+      >
+        {t(pageDraft ? 'reliability.review' : 'reliability.reviewAll')}
       </button>
     );
   }
@@ -236,7 +254,7 @@ export function TopBar({
       </div>
       <div className="topbar-actions">
         {/* saving is the same for both sides of a split, so it shows once */}
-        {pane === 'main' && <SaveIndicator editing={editing ?? false} />}
+        {pane === 'main' && <SaveIndicator editing={editing ?? false} pageId={page?.id} />}
         {page && (
           <>
             <span className="topbar-meta">{t('topBar.edited', { time: relativeTime(page.updatedAt) })}</span>

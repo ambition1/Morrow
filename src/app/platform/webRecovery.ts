@@ -68,6 +68,16 @@ export class WebRecovery {
     }
   }
 
+  /** 用来标记本标签页生成的草稿，不作为用户身份。 */
+  ownsDraft(draft: WebDraft): boolean {
+    return draft.owner === this.owner;
+  }
+
+  /** 干净会话接收新快照后更新草稿共同基准。 */
+  adoptBase(state: WorkspaceState): void {
+    this.base = structuredClone({ pages: { ...state.pages }, docs: { ...state.docs } });
+  }
+
   /** 对比界面只能读取当前桥接版本，不能推进或强制覆盖。 */
   getRevision = (): string => this.revision();
 
@@ -146,7 +156,8 @@ export class WebRecovery {
       .filter(
         (draft) =>
           JSON.stringify(batch.state?.docs[draft.pageId]) === JSON.stringify(draft.doc) &&
-          JSON.stringify(batch.state?.pages[draft.pageId]) === JSON.stringify(draft.page),
+          JSON.stringify({ ...batch.state?.pages[draft.pageId], lastOpenedAt: null }) ===
+            JSON.stringify({ ...draft.page, lastOpenedAt: null }),
       );
   }
 

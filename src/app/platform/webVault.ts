@@ -16,6 +16,7 @@ export async function webRequest(path: string, init?: RequestInit): Promise<Resp
     const error = (await response.json().catch(() => ({}))) as { error?: string };
     throw Object.assign(new Error(error.error ?? t('web.requestFailed')), {
       status: response.status,
+      staleVault: response.status === 409,
       revision: response.headers.get('X-Morrow-Revision'),
     });
   }
@@ -33,12 +34,14 @@ export function webVaultBridge(): WebVaultBridge {
   let revision = '0';
   /** 同一个浏览器的请求串行执行，避免自身触发版本冲突。 */
   let pending: Promise<unknown> = Promise.resolve();
-  /** 避免重复提示其他设备已修改。 */
-  let notified = false;
+  /** 等待执行的上传或保存同样会阻止快照替换。 */
+  let writes = 0;
 
   /** 文件操作及版本更新在一个队列任务内完成。 */
   function request<T>(route: string, init?: RequestInit): Promise<T> {
     /** 当前排队的请求，失败不会阻塞之后的重试。 */
+    const writing = init?.method === 'POST';
+    if (writing) writes++;
     const task = pending
       .catch(() => {})
       .then(async () => {
@@ -57,8 +60,12 @@ export function webVaultBridge(): WebVaultBridge {
       if (init?.method === 'POST' && detail.status !== 409 && detail.revision) revision = detail.revision;
       throw error;
     });
-    pending = tracked;
-    return tracked;
+    /** 释放写入标记只发生在该请求的回执处理完成后。 */
+    const settled = tracked.finally(() => {
+      if (writing) writes--;
+    });
+    pending = settled;
+    return settled;
   }
 
   /** 文件路径以查询参数编码，不允许构造额外路由。 */
@@ -70,6 +77,11 @@ export function webVaultBridge(): WebVaultBridge {
     root: t('web.storageName'),
     strictConflicts: true,
     getRevision: () => revision,
+    fork: webVaultBridge,
+    isWriting: () => writes > 0,
+    adoptRevision: (confirmed) => {
+      revision = confirmed;
+    },
     scan: () => request('scan'),
     apply: (ops) =>
       request('apply', {
@@ -93,28 +105,40 @@ export function webVaultBridge(): WebVaultBridge {
     },
     exists: (path) => request(query('exists', path)),
     listFiles: (dir) => request(query('list', dir)),
-    // 多设备更新提示刷新；不在编辑期间替换用户正在输入的内容。
-    onChange: () => {
-      /** 定期检测服务端版本变化，失败时不丢弃本地待保存内容。 */
-      const timer = window.setInterval(() => {
-        if (document.visibilityState === 'hidden' || notified) return;
-        void pending
-          .catch(() => {})
-          .then(async () => {
-            /** 版本探测不改变当前工作区的基准版本。 */
-            const response = await webRequest('/api/vault/revision');
-            /** 新版本只能通过刷新并重新加载完整工作区接收。 */
-            const value = (await response.json()) as { revision: string };
-            if (String(value.revision) !== revision && !notified) {
-              notified = true;
-              toast(t('web.changed'), { durationMs: 60_000 });
-            }
-          })
-          .catch(() => {});
-      }, 5000);
-      return () => window.clearInterval(timer);
-    },
+    /** Web 快照轮询由工作区协调，独立读取仓库不启动计时。 */
+    onChange: () => () => {},
     // 附件读取为 Blob URL，避免直接执行上传内容。
     fileUrl: () => null,
   };
+}
+
+/** 定期发现服务器更新，切回浏览器时立即检查。 */
+export function watchWebWorkspace(bridge: WebVaultBridge, refresh: () => Promise<boolean>): () => void {
+  /** 合并重叠的轮询和可见性事件。 */
+  let checking = false;
+  /** 同一远端版本只提示一次。 */
+  let notified = '';
+  /** 读取服务器版本，干净会话可以直接接收。 */
+  async function check() {
+    if (checking || document.visibilityState === 'hidden') return;
+    checking = true;
+    try {
+      /** 服务端版本探测不推进活动写入基准。 */
+      const response = await webRequest('/api/vault/revision');
+      /** 当前服务端版本以读端点结果为准。 */
+      const { revision } = (await response.json()) as { revision: string };
+      if (revision === bridge.getRevision()) return;
+      if (await refresh()) return;
+      if (notified === revision) return;
+      notified = revision;
+      toast(t('web.changed'), { durationMs: 12_000 });
+    } catch {
+      // 断网时继续使用当前镜像，后续轮询重新连接。
+    } finally {
+      checking = false;
+    }
+  }
+  window.setInterval(() => void check(), 5000);
+  document.addEventListener('visibilitychange', () => void check());
+  return () => void check();
 }

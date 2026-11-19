@@ -8,6 +8,25 @@ import type { TranslationSchema } from '../types';
 /** 简体中文词典，与英文词典保持键和插值参数一致。 */
 export const zhCN: TranslationSchema = {
   reliability: {
+    useLocal: '采用本机整页正文',
+    diffTitle: '正文差异',
+    noDiff: '两份正文的 Markdown 相同。',
+    diffHunk: '差异 {number}',
+    noLines: '这一侧没有对应内容',
+    chooseServer: '用服务器这段',
+    chooseLocal: '用本机这段',
+    chooseBoth: '保留两段',
+    mergePreview: '合并预览',
+    editMerge: '手动编辑预览',
+    backToChoices: '返回逐段选择',
+    chooseRemaining: '还有 {count} 处差异待选择。',
+    diffTruncated: '长段仅显示开头，合并预览包含完整内容。',
+    pageTitle: '「{title}」的草稿与冲突',
+    reviewAll: '查看全部草稿',
+    emptyPage: '当前页面没有待恢复草稿。',
+    thisTab: '此标签页',
+    otherTab: '此浏览器的其他会话',
+    workspaceChanged: '笔记库有更新',
     title: '草稿与冲突处理',
     found: '发现本机尚未同步的草稿。',
     review: '查看草稿',
@@ -53,10 +72,9 @@ export const zhCN: TranslationSchema = {
   },
   web: {
     shortcutsHelp: '{shortcutDaily} 打开今日笔记。快捷键仅在当前浏览器页面生效。',
-    changed: '笔记库已在其他设备更新。请复制未保存内容后刷新页面，再继续编辑。',
+    changed: '笔记库有远端更新。待保存的内容仍留在此浏览器。',
     storageName: '服务器笔记库',
-    storageHelp:
-      '所有设备访问同一份笔记、附件和历史记录。能够访问此地址的家庭成员都可以查看和编辑；其他设备更新后请先复制未保存内容再刷新。请定期导出备份。',
+    storageHelp: '所有设备共享服务器上已保存的笔记、附件和历史记录。本机未同步的草稿只保存在此浏览器。',
     requestFailed: '请求失败，请检查连接后重试。',
     aboutFooter: '浏览器版无需账号，直接访问服务器笔记库。能够访问此地址的人都可以查看和编辑其中的内容。',
   },

@@ -14,6 +14,11 @@ export function commitEditors(): void {
   for (const commit of pending) commit();
 }
 
+/** 输入法尚未提交文字时，远端快照不能替换当前编辑器。 */
+export function isEditorComposing(): boolean {
+  return Boolean(focused && !focused.isDestroyed && focused.view.composing);
+}
+
 export function setFocusedEditor(editor: Editor | null): void {
   focused = editor;
 }

@@ -2,6 +2,26 @@ import type { TranslationSchema } from '../types';
 
 export const es: TranslationSchema = {
   reliability: {
+    useLocal: 'Usar la versión local completa',
+    diffTitle: 'Diferencias de contenido',
+    noDiff: 'Las dos versiones tienen el mismo Markdown.',
+    diffHunk: 'Cambio {number}',
+    noLines: 'Sin líneas en este lado',
+    chooseServer: 'Usar líneas del servidor',
+    chooseLocal: 'Usar líneas locales',
+    chooseBoth: 'Conservar ambas',
+    mergePreview: 'Vista previa de la fusión',
+    editMerge: 'Editar la vista previa',
+    backToChoices: 'Volver a las opciones',
+    chooseRemaining: 'Cambios por revisar: {count}.',
+    diffTruncated:
+      'Aquí solo se muestran las primeras líneas de los cambios largos. La vista previa contiene el texto completo.',
+    pageTitle: 'Borradores y conflictos de {title}',
+    reviewAll: 'Ver todos los borradores',
+    emptyPage: 'No hay borradores para recuperar en esta página.',
+    thisTab: 'Esta pestaña',
+    otherTab: 'Otra sesión de este navegador',
+    workspaceChanged: 'Hay una actualización de la biblioteca',
     title: 'Borradores y conflictos',
     found: 'Hay borradores locales sin sincronizar.',
     review: 'Ver borradores',
@@ -49,10 +69,11 @@ export const es: TranslationSchema = {
   },
   web: {
     shortcutsHelp: '{shortcutDaily} opens today’s note. Shortcuts work within this browser tab.',
-    changed: 'Your vault changed on another device. Copy any unsaved content and reload before editing.',
+    changed:
+      'La biblioteca cambió en otro dispositivo. Los cambios pendientes se conservan en este navegador.',
     storageName: 'Espacio familiar compartido',
     storageHelp:
-      'Todos los dispositivos comparten páginas, archivos e historial. Cualquier persona con acceso a esta dirección puede ver y editar. Copia los cambios sin guardar antes de actualizar y exporta copias de seguridad.',
+      'Los dispositivos comparten las notas, los adjuntos y el historial guardados en el servidor. Los borradores sin sincronizar se conservan en este navegador.',
     requestFailed: 'La solicitud falló. Comprueba la conexión y vuelve a intentarlo.',
     aboutFooter:
       'La edición web abre un espacio familiar sin cuentas. Cualquier persona con acceso a esta dirección puede ver y editar su contenido.',

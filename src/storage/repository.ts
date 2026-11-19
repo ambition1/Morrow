@@ -12,6 +12,8 @@ export interface WriteBatch {
   pages: PageMeta[];
   docs: Array<{ id: PageId; doc: DocNode }>;
   removed: PageId[];
+  /** 批次仅含正文编辑和访问时间，允许 Web 校验后重建。 */
+  rebaseable?: boolean;
   snapshots?: Snapshot[];
   /** 元数据修改所基于的原始快照，防止同一版本被陈旧界面覆盖。 */
   snapshotBases?: Snapshot[];

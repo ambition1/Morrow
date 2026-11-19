@@ -1,5 +1,24 @@
 export const en = {
   reliability: {
+    useLocal: 'Use entire local version',
+    diffTitle: 'Content differences',
+    noDiff: 'Both versions have the same Markdown.',
+    diffHunk: 'Change {number}',
+    noLines: 'No lines on this side',
+    chooseServer: 'Use server lines',
+    chooseLocal: 'Use local lines',
+    chooseBoth: 'Keep both',
+    mergePreview: 'Merge preview',
+    editMerge: 'Edit the preview',
+    backToChoices: 'Back to choices',
+    chooseRemaining: 'Changes still to review: {count}.',
+    diffTruncated: 'Long changes show only their first lines here. The merge preview includes the full text.',
+    pageTitle: 'Drafts and conflicts for {title}',
+    reviewAll: 'View all drafts',
+    emptyPage: 'There are no drafts to recover for this page.',
+    thisTab: 'This tab',
+    otherTab: 'Another session in this browser',
+    workspaceChanged: 'Vault update available',
     title: 'Drafts and conflicts',
     found: 'Unsynced drafts were found on this device.',
     review: 'Review drafts',
@@ -47,10 +66,10 @@ export const en = {
   },
   web: {
     shortcutsHelp: '{shortcutDaily} opens today’s note. Shortcuts work within this browser tab.',
-    changed: 'Your vault changed on another device. Copy any unsaved content and reload before editing.',
+    changed: 'The vault changed remotely. Unsaved edits stay in this browser.',
     storageName: 'Server vault',
     storageHelp:
-      'Pages, attachments and history are shared by everyone who can access this address. Changes from another device require a refresh. Copy unsaved content before refreshing and export backups regularly.',
+      'Devices share notes, attachments, and history saved to the server. Unsynced drafts stay in this browser.',
     requestFailed: 'Request failed. Check the connection and try again.',
     aboutFooter:
       'The browser edition opens a shared family vault without accounts. Everyone with access to this address can view and edit its contents.',
