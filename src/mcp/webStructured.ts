@@ -8,14 +8,20 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { canvasDoc, readCanvas, writeCanvas, canvasFromDoc } from '../core/canvas';
 import { BODY_COLUMN } from '../core/database';
+import { inlineDateValue } from '../core/inlineDate';
 import { childrenOf } from '../core/tree';
-import { reservedPropertyName } from '../core/vault/pageFile';
+import { reservedPropertyName, sameValue } from '../core/vault/pageFile';
 import type { DatabaseDef, PropValue, PageMeta } from '../core/model';
 import type { Command } from '../core/commands';
 import { canvasSchema, databaseSchema, entityPath, propValueSchema, revisionSchema } from './webSchemas';
 import { toolCall } from './webResult';
 import { withWebVault, vaultError } from './webVault';
 import type { WebVault } from './webVault';
+
+/** 复用界面日历的日期校验，只接受没有时刻的四位年份日期。 */
+function isDatabaseDate(value: PropValue): value is string {
+  return typeof value === 'string' && inlineDateValue(value)?.date === value;
+}
 
 /** 从严格输入补齐新标识，并验证字段、视图和选项引用。 */
 function databaseDefinition(
@@ -78,6 +84,10 @@ function databaseDefinition(
     )
       throw vaultError(400, '字段选项的名称和标识必须唯一。');
   }
+  /** 含日期的规则和行属性共用同一个实历日期校验。 */
+  const dateFields = new Set(
+    database.properties.filter((prop) => prop.type === 'date').map((prop) => prop.id),
+  );
   /** 视图可以引用数据库字段与项目内置的伪属性。 */
   const properties = new Set(['title', 'created', 'updated', ...database.properties.map((prop) => prop.id)]);
   if (new Set(database.views.map((view) => view.id)).size !== database.views.length)
@@ -88,15 +98,29 @@ function databaseDefinition(
       ...view.filters.map((filter) => filter.prop),
       ...view.sorts.map((sort) => sort.prop),
       ...view.hidden,
-      ...Object.keys(view.widths ?? {}).filter((id) => id !== BODY_COLUMN),
+      ...[...Object.keys(view.widths ?? {}), ...(view.columnOrder ?? [])].filter((id) => id !== BODY_COLUMN),
       ...[view.groupBy, view.dateProp].filter((value): value is string => value !== null),
     ];
     if (refs.some((id) => !properties.has(id))) throw vaultError(400, '视图引用了不存在的字段。');
-    if (
-      view.dateProp &&
-      !database.properties.some((prop) => prop.id === view.dateProp && prop.type === 'date')
-    )
+    if (view.dateProp && !dateFields.has(view.dateProp))
       throw vaultError(400, '日历日期字段必须是日期类型。');
+    // 旧文件中的日期条件原样回传时保留，仅拒绝新写入的无效日期。
+    const previousFilters = previous?.views.find((item) => item.id === view.id)?.filters ?? [];
+    if (
+      view.filters.some(
+        ({ id, prop, op, value }) =>
+          dateFields.has(prop) &&
+          op !== 'empty' &&
+          op !== 'notEmpty' &&
+          value !== null &&
+          value !== '' &&
+          !isDatabaseDate(value) &&
+          !previousFilters.some(
+            (rule) => rule.id === id && rule.prop === prop && rule.op === op && sameValue(rule.value, value),
+          ),
+      )
+    )
+      throw vaultError(400, '日期筛选值必须是有效的 YYYY-MM-DD 日期。');
   }
   return database;
 }
@@ -134,14 +158,7 @@ function rowValues(
       result[prop.id] = value.map((target) => vault.page(target).id);
     else if (prop.type === 'number' && typeof value === 'number') result[prop.id] = value;
     else if (prop.type === 'checkbox' && typeof value === 'boolean') result[prop.id] = value;
-    else if (
-      prop.type === 'date' &&
-      typeof value === 'string' &&
-      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-      !Number.isNaN(Date.parse(value)) &&
-      new Date(value).toISOString().slice(0, 10) === value
-    )
-      result[prop.id] = value;
+    else if (prop.type === 'date' && isDatabaseDate(value)) result[prop.id] = value;
     else if (['text', 'url'].includes(prop.type) && typeof value === 'string') result[prop.id] = value;
     else throw vaultError(400, `字段 ${prop.name} 的值类型不正确。`);
   }

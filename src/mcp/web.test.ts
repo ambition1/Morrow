@@ -222,6 +222,15 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
           { id: 'done', name: '完成', color: '#1b946f' },
         ],
       },
+      {
+        id: 'labels',
+        name: '标签组',
+        type: 'multiSelect',
+        options: [
+          { id: 'warm', name: '暖色', color: '#f8e2b0' },
+          { id: 'dark', name: '深色', color: '#243874' },
+        ],
+      },
       { id: 'count', name: '次数', type: 'number' },
       { id: 'checked', name: '确认', type: 'checkbox' },
       { id: 'due', name: '日期', type: 'date' },
@@ -233,8 +242,12 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
         name: '表格',
         type: 'table',
         showBody: true,
-        columnOrder: ['$body'],
-        widths: { $body: 180 },
+        columnOrder: ['title', 'labels', '$body', 'due'],
+        widths: { $body: 180, title: 210, labels: 160 },
+        groupBy: 'labels',
+        groupDirection: 'desc',
+        collapsedGroups: ['"dark"'],
+        filters: [{ id: 'date-filter', prop: 'due', op: 'gt', value: '2024-02-29' }],
       },
       { id: 'board', name: '看板', type: 'board', groupBy: 'status' },
       { id: 'calendar', name: '日历', type: 'calendar', dateProp: 'due' },
@@ -249,11 +262,24 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
   expect(created.error).toBe(false);
   expect(created.value.page.kind).toBe('database');
   expect(created.value.page.path).toBe('项目任务.md');
+  // 无效年份、日期和日期时刻不会写入语义行接口。
+  for (const date of ['0000-01-01', '10000-01-01', '2025-02-29', '2024-02-29T12:00']) {
+    expect(
+      (
+        await tool('create_database_row', {
+          database_path: created.value.page.path,
+          title: '无效日期',
+          values: { 日期: date },
+          revision: created.value.revision,
+        })
+      ).error,
+    ).toBe(true);
+  }
   /** 行值可以使用用户可读的字段与选项名称。 */
   const row = await tool('create_database_row', {
     database_path: created.value.page.path,
     title: '第一项',
-    values: { 状态: '待办', 次数: 2, 确认: true, 日期: '2026-11-07' },
+    values: { 状态: '待办', 标签组: ['暖色', 'dark'], 次数: 2, 确认: true, 日期: '2026-11-07' },
     markdown: '保留这段正文。',
     revision: created.value.revision,
   });
@@ -263,7 +289,9 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
   const raw = await tool('read_page', { path: row.value.page.path });
   const extra = await tool('write_page', {
     path: row.value.page.path,
-    text: raw.value.data.replace('---\n', '---\n自定义: 保留\n# 保留注释\n'),
+    text: raw.value.data
+      .replace('---\n', '---\n自定义: 保留\n# 保留注释\n')
+      .replace('保留这段正文。', '保留**更新后的正文**。'),
     expected: raw.value.data,
     revision: raw.value.revision,
   });
@@ -296,9 +324,14 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
   expect(
     read.value.page.database.properties[0].options.map((option: { color: string }) => option.color),
   ).toEqual(['teal', '#1B946F']);
+  expect(read.value.page.database.properties[1].options).toEqual([
+    { id: 'warm', name: '暖色', color: '#F8E2B0' },
+    { id: 'dark', name: '深色', color: '#243874' },
+  ]);
   expect(read.value.rows[0].properties).toMatchObject({
     count: 3,
     status: 'done',
+    labels: ['warm', 'dark'],
     checked: true,
     due: '2026-11-07',
   });
@@ -311,6 +344,18 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
   });
   /** 字段改名沿用原ID，因此原行值与未知 YAML 不会丢失。 */
   const changed = structuredClone(read.value.page.database);
+  // 无效日期筛选不会写入库；校验失败后仍可沿用原 revision 提交有效定义。
+  changed.views[0].filters[0].value = '2025-02-29';
+  expect(
+    (
+      await tool('update_database', {
+        path: created.value.page.path,
+        definition: changed,
+        revision: read.value.revision,
+      })
+    ).error,
+  ).toBe(true);
+  changed.views[0].filters[0].value = '2024-02-29';
   changed.properties.find((prop: { id: string }) => prop.id === 'count').name = '数量';
   const schemaUpdate = await tool('update_database', {
     path: created.value.page.path,
@@ -322,11 +367,20 @@ it('数据库结构、行属性、视图和回收站与 UI 存储格式一致', 
   expect(after.value.data).toContain('数量: 3');
   expect(after.value.data).toContain('自定义: 保留');
   expect(after.value.data).toContain('# 保留注释');
-  expect(after.value.data).toContain('保留这段正文。');
+  expect(after.value.data).toContain('保留**更新后的正文**。');
+  // 读出的定义可直接用于创建空表，原数据库记录不被复制。
+  const copy = await tool('create_database', {
+    title: '从结构创建的空表',
+    definition: schemaUpdate.value.page.database,
+    revision: after.value.revision,
+  });
+  expect(copy.error).toBe(false);
+  expect(copy.value.rows).toEqual([]);
+  expect(copy.value.page.database).toEqual(schemaUpdate.value.page.database);
   /** 行删除进入界面回收站，而不是直接永久删除。 */
   const trashed = await tool('trash_database_row', {
     path: row.value.page.path,
-    revision: after.value.revision,
+    revision: copy.value.revision,
   });
   expect(trashed.error).toBe(false);
   expect(trashed.value.page.trashedAt).toBeTypeOf('number');

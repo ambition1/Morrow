@@ -1,3 +1,4 @@
+import { BODY_COLUMN, CREATED_PROP, TITLE_PROP, UPDATED_PROP } from './database';
 import { isRecord, validateDoc } from './doc';
 import { normalizeExtra } from './vault/frontmatter';
 import {
@@ -210,10 +211,27 @@ function normalizeWidths(raw: Record<string, unknown>): Record<string, number> {
 
 export function normalizeDatabase(raw: unknown): DatabaseDef | null {
   if (!isRecord(raw)) return null;
-  return {
-    properties: records(raw.properties).flatMap((prop) => normalizeProp(prop) ?? []),
-    views: records(raw.views).flatMap((view) => normalizeView(view) ?? []),
-  };
+  // 旧文件可能保留已删除字段的列顺序和列宽，归一化后可直接通过 MCP 回传。
+  const properties = records(raw.properties).flatMap((prop) => normalizeProp(prop) ?? []);
+  // 正文列与内置列没有属性定义，仍保留其布局。
+  const columns = new Set([
+    BODY_COLUMN,
+    TITLE_PROP,
+    CREATED_PROP,
+    UPDATED_PROP,
+    ...properties.map((prop) => prop.id),
+  ]);
+  // 只清理无法渲染的旧布局引用，保留其他视图设置。
+  const views = records(raw.views).flatMap((item) => {
+    // 验证视图自身结构后再处理列引用。
+    const view = normalizeView(item);
+    if (!view) return [];
+    if (view.columnOrder) view.columnOrder = view.columnOrder.filter((id) => columns.has(id));
+    if (view.widths)
+      view.widths = Object.fromEntries(Object.entries(view.widths).filter(([id]) => columns.has(id)));
+    return [view];
+  });
+  return { properties, views };
 }
 
 // validates every record independently so one bad record never blocks the rest

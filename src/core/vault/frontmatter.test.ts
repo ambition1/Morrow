@@ -144,14 +144,20 @@ it('Markdown 往返保留数据库列、分组、正文设置和扩展选项色'
   view.groupDirection = 'desc';
   view.collapsedGroups = ['null', '"id2"'];
   view.showBody = true;
-  view.columnOrder.push('$body');
+  // 模拟旧版删除字段后仍保存在 Markdown 中的布局引用。
+  view.columnOrder.push('$body', 'deleted-column');
+  view.widths = { $body: 180, 'deleted-column': 200 };
   page.database.properties[0]!.options[0]!.color = 'teal';
   page.database.properties[0]!.options[1]!.color = '#1b946f';
   // 通过正式写入与读取入口检查磁盘格式。
   const text = renderPageText(Object.fromEntries(managedFrontmatter(page, '数据库', null)), null, '正文');
   // 重新读取后的数据库定义用于恢复表格视图。
   const database = readPageText(text).database;
-  expect(database?.views[0]).toMatchObject(view);
+  expect(database?.views[0]).toMatchObject({
+    ...view,
+    columnOrder: [page.database.properties[0]!.id, 'title', '$body'],
+    widths: { $body: 180 },
+  });
   expect(database?.properties[0]?.options.map((option) => option.color)).toEqual([
     'teal',
     '#1B946F',
