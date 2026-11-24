@@ -304,6 +304,14 @@ curl -f https://notes.example.com/api/health
 
 应用以非 root 用户运行，根文件系统只读，只有数据卷和临时目录可写；日志按 10 MB × 3 轮转。`stop_grace_period` 给保存请求留出结束时间。这里只支持一个应用实例写入同一卷，不能横向扩容或同时让外部程序编辑服务器笔记。
 
+## 启用 Web MCP
+
+默认关闭。在 Compose 使用的 `.env` 中设置 `MORROW_MCP_ENABLED=true`，使用当前部署模式重新构建并启动服务。MCP 客户端使用 Streamable HTTP，地址为现有 Web 服务地址加 `/mcp`，例如回环部署的 `http://localhost:3000/mcp`。使用反向代理时，`/mcp` 与页面使用同一入口。
+
+Web MCP 和 Web 界面使用同一个笔记库及访问边界。可以访问该接口的客户端可通过工具读写笔记。接入后可用 `list_pages` 验证连接。修改笔记前先读取当前版本，版本冲突时重新读取并合并。
+
+直接用 Node 运行 Web 服务时，先执行 `npm run build:mcp`，再为服务进程设置 `MORROW_MCP_ENABLED=true`。
+
 ## 非容器开发
 
 ```sh

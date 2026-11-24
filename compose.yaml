@@ -22,6 +22,7 @@ services:
     volumes:
       - morrow-data:/app/data
     environment:
+      MORROW_MCP_ENABLED: ${MORROW_MCP_ENABLED:-false}
       MORROW_HOST: 0.0.0.0
       MORROW_DATA_DIR: /app/data
       PORT: 3000
