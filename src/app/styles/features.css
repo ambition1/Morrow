@@ -242,14 +242,30 @@
   transition: opacity 120ms var(--ease);
 }
 .prose .code-block:hover .code-language,
-.prose .code-language:focus,
+.prose .code-language:focus-within,
+.prose .code-language:has(.select-button[aria-expanded='true']),
 .prose .code-block:focus-within .code-language {
   opacity: 1;
   border-color: var(--border);
   background: var(--surface);
 }
-.prose .code-language:disabled {
+/* 触屏没有悬停状态，直接显示语言选择入口。 */
+@media (hover: none) {
+  .prose .code-language {
+    opacity: 1;
+  }
+}
+.prose .code-language:has(button:disabled) {
   display: none;
+}
+/* 语言入口沿用全局选择按钮，保持代码块内的紧凑尺寸。 */
+.prose .code-language .select-button {
+  min-width: 0;
+  height: 24px;
+  min-height: 24px;
+  padding: 1px 6px;
+  font-size: var(--text-xs);
+  max-width: 150px;
 }
 .hljs-keyword,
 .hljs-selector-tag,
@@ -2589,6 +2605,12 @@ td:hover .prop-empty,
 /* 历史正文预览使用实色阅读表面，玻璃只留在弹层外壳。 */
 .history-dialog .history-preview {
   background: var(--surface);
+}
+
+/* 图谱深度选择延续原有紧凑设置行，不挤压开关与文字。 */
+.graph-control-fields .select-button {
+  min-width: 0;
+  width: 80px;
 }
 
 /* 数据库额外选项色沿用实色色样，用深底和浅字保持明暗主题中的辨识度。 */

@@ -17,6 +17,7 @@ import type { PageId } from '../../core/model';
 import { foldText } from '../../core/search';
 import { navigate, openPage } from '../router';
 import { useWorkspace } from '../workspace';
+import { Select } from './Select';
 import { TopBar } from './TopBar';
 import { t } from '../i18n';
 
@@ -372,18 +373,15 @@ export function GraphView({ focus }: { focus: PageId | null }) {
               {t('graph.subpages')}
             </label>
             {focus ? (
-              <label className="checkbox-row">
+              <div className="checkbox-row">
                 {t('graph.depth')}
-                <select
-                  className="text-input small"
-                  value={options.depth}
-                  onChange={(event) => change({ depth: Number(event.target.value) })}
-                >
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3</option>
-                </select>
-              </label>
+                <Select
+                  label={t('graph.depth')}
+                  value={String(options.depth)}
+                  options={['1', '2', '3'].map((value) => ({ value, label: value }))}
+                  onChange={(value) => change({ depth: Number(value) })}
+                />
+              </div>
             ) : (
               <label className="checkbox-row">
                 <input

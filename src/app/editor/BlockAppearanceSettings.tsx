@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { normalizeBackground } from '../../core/blockAppearance';
 import { CALLOUT_TONES, COLORS } from '../../core/model';
 import { Popover } from '../components/Popover';
+import { Select } from '../components/Select';
 import { Switch } from '../components/primitives';
 import { colorLabel } from '../i18n/labels';
 import { t } from '../i18n';
@@ -364,30 +365,26 @@ function ColumnAppearance({ editor, pos, number }: { editor: Editor; pos: number
   return (
     <div className="block-column-setting">
       <span>{t('editorBlocks.columnNumber', { number })}</span>
-      <select
-        className="text-input small"
-        aria-label={t('editorBlocks.columnBackground', { number })}
+      <Select
+        label={t('editorBlocks.columnBackground', { number })}
         value={node.attrs.background ?? ''}
-        onChange={(event) => update({ background: event.target.value || null })}
-      >
-        <option value="">{t('editorBlocks.defaultColor')}</option>
-        {COLORS.map((color) => (
-          <option value={color} key={color}>
-            {colorLabel(color)}
-          </option>
-        ))}
-      </select>
-      <select
-        className="text-input small"
-        aria-label={t('editorBlocks.columnBorder', { number })}
+        options={[
+          { value: '', label: t('editorBlocks.defaultColor') },
+          ...COLORS.map((color) => ({ value: color, label: colorLabel(color), color })),
+        ]}
+        onChange={(value) => update({ background: value || null })}
+      />
+      <Select
+        label={t('editorBlocks.columnBorder', { number })}
         value={node.attrs.border ?? ''}
-        onChange={(event) => update({ border: event.target.value || null })}
-      >
-        <option value="">{t('editorBlocks.defaultColor')}</option>
-        <option value="none">{t('editorBlocks.borderNone')}</option>
-        <option value="thin">{t('editorBlocks.borderThin')}</option>
-        <option value="left">{t('editorBlocks.borderLeft')}</option>
-      </select>
+        options={[
+          { value: '', label: t('editorBlocks.defaultColor') },
+          { value: 'none', label: t('editorBlocks.borderNone') },
+          { value: 'thin', label: t('editorBlocks.borderThin') },
+          { value: 'left', label: t('editorBlocks.borderLeft') },
+        ]}
+        onChange={(value) => update({ border: value || null })}
+      />
     </div>
   );
 }

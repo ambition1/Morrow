@@ -16,10 +16,13 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { EditorView } from '@tiptap/pm/view';
 import { common, createLowlight } from 'lowlight';
+import { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { CALLOUT_TONES, calloutTone, COLORS } from '../../core/model';
 import type { CalloutTone, ColorName } from '../../core/model';
 import { tagColor } from '../../core/tags';
 import { emojiElement } from '../components/Emoji';
+import { Select } from '../components/Select';
 import { applyBlockAppearance, openBlockAppearance } from './BlockAppearance';
 import { openDialog } from '../ui';
 import { t } from '../i18n';
@@ -376,39 +379,43 @@ export const CodeBlock = CodeBlockLowlight.extend({
       let current = node;
       const dom = document.createElement('div');
       dom.className = 'code-block';
-      const select = document.createElement('select');
+      // 代码语言复用全局选择器，挂载容器与可编辑代码内容隔离。
+      const select = document.createElement('div');
       select.className = 'code-language';
       select.contentEditable = 'false';
-      select.setAttribute('aria-label', t('editor.codeLanguage'));
-      const plain = document.createElement('option');
-      plain.value = '';
-      plain.textContent = t('editor.plainText');
-      select.append(plain);
-      for (const language of CODE_LANGUAGES) {
-        const option = document.createElement('option');
-        option.value = language;
-        option.textContent = language;
-        select.append(option);
-      }
+      // 独立 React 根随节点销毁，弹层仍通过共享 Popover 管理。
+      const languageRoot = createRoot(select);
+      // 缓存已渲染状态，输入代码时不重复更新语言组件。
+      let renderedLanguage: string | null = null;
+      // 缓存编辑权限，权限变化时同步按钮禁用状态。
+      let renderedEditable: boolean | null = null;
+      // 同步文档语言与编辑权限，并保留导入文档中的未知语言。
       const sync = () => {
+        // 当前节点保存的语言，空字符串表示纯文本。
         const language = String(current.attrs.language ?? '');
-        if (
-          language &&
-          !CODE_LANGUAGES.includes(language) &&
-          ![...select.options].some((o) => o.value === language)
-        ) {
-          const option = document.createElement('option');
-          option.value = language;
-          option.textContent = language;
-          select.append(option);
-        }
-        select.value = language;
-        select.disabled = !editor.isEditable;
+        if (renderedLanguage === language && renderedEditable === editor.isEditable) return;
+        renderedLanguage = language;
+        renderedEditable = editor.isEditable;
+        languageRoot.render(
+          createElement(Select<string>, {
+            label: t('editor.codeLanguage'),
+            value: language,
+            disabled: !editor.isEditable,
+            options: [
+              { value: '', label: t('editor.plainText') },
+              ...[...new Set([...CODE_LANGUAGES, ...(language ? [language] : [])])].map((value) => ({
+                value,
+                label: value,
+              })),
+            ],
+            onChange: (value) => {
+              // 在提交时再次确认编辑权限，不改变代码文本与光标内容。
+              if (editor.isEditable) setAttrs(editor.view, getPos, { language: value || null });
+            },
+          }),
+        );
       };
       sync();
-      select.addEventListener('change', () =>
-        setAttrs(editor.view, getPos, { language: select.value || null }),
-      );
       const pre = document.createElement('pre');
       const code = document.createElement('code');
       pre.append(code);
@@ -489,6 +496,8 @@ export const CodeBlock = CodeBlockLowlight.extend({
         destroy: () => {
           if (timer) clearTimeout(timer);
           stopWatching();
+          // 延后卸载，避免编辑器在 React 提交期间销毁节点引发嵌套卸载。
+          queueMicrotask(() => languageRoot.unmount());
         },
       };
     };

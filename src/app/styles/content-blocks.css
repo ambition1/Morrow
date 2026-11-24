@@ -229,7 +229,7 @@
   align-items: center;
   gap: 6px;
 }
-.block-column-setting select {
+.block-column-setting .select-button {
   width: 100%;
   min-width: 0;
 }
