@@ -70,7 +70,7 @@
 }
 .database-v2 .db-row-number {
   padding: 0 8px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   text-align: center;
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
@@ -90,6 +90,14 @@
 .database-v2 .db-title-input {
   background: transparent;
   border-color: transparent;
+}
+.database-v2 .db-title-input:not(:focus) {
+  text-overflow: ellipsis;
+}
+.database-v2 .db-title-input:focus {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 .database-v2 .db-title-input:not(:focus)::placeholder {
   color: var(--text-muted);
@@ -185,4 +193,260 @@
   flex-shrink: 0;
   margin-right: 6px;
   color: var(--text-muted);
+}
+
+/* 表格分组复用共享表面、按钮和色彩令牌。 */
+.database-v2 .db-group-row td {
+  background: var(--surface);
+  padding: 8px;
+}
+.db-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.db-table th[draggable='true'] {
+  cursor: grab;
+}
+/* 颜色色样同时用于选择按钮和菜单，保留文字名称。 */
+.select-color-swatch.chip {
+  padding: 0;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* 色样与文字相邻，选中标记仍位于菜单右侧。 */
+.select-option:has(> .select-color-swatch) .select-option-text {
+  flex: 1;
+}
+
+/* 分组之间留出一行空白，沿用页面表面色与共享间距。 */
+.database-v2 .db-group-gap td {
+  height: var(--space-6);
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+}
+/* 每个展开组都保留独立的新建入口，与原表格新建按钮保持一致。 */
+.database-v2 .db-group-create td {
+  padding: 0;
+}
+.database-v2 .db-group-create .db-new-row {
+  width: 100%;
+  margin-top: 0;
+  border-radius: 0;
+  text-align: left;
+}
+
+/* 冻结列使用不透明表面，名称列在窄窗与分栏内保留横向阅读空间。 */
+.database-v2 .db-table-wrap {
+  container-type: inline-size;
+  /* 自动滚动为获得焦点的普通列留出冻结区域。 */
+  scroll-padding-left: calc(44px + min(var(--db-saved-title-width), max(116px, 56%)));
+}
+.database-v2 .db-table {
+  --db-title-width: min(var(--db-saved-title-width), max(116px, 56cqw));
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.database-v2 .db-table .db-row-number,
+.database-v2 .db-table .db-col-title {
+  position: sticky;
+  z-index: 2;
+}
+.database-v2 .db-table .db-row-number {
+  left: 0;
+}
+.database-v2 .db-table .db-col-title {
+  left: 44px;
+  border-right-color: var(--border-strong);
+}
+.database-v2 .db-table :is(th.db-row-number, th.db-col-title) {
+  z-index: 3;
+}
+.database-v2 .db-table :is(td.db-row-number, td.db-col-title) {
+  background: var(--surface);
+}
+.database-v2 .db-title .icon-button {
+  flex: none;
+}
+.database-v2 .db-row-actions {
+  color: var(--text-muted);
+}
+@media (hover: none) {
+  .database-v2 .db-open {
+    opacity: 1;
+  }
+}
+/* 合并单元格允许控件相对表格滚动容器吸附。 */
+.database-v2 :is(.db-group-row, .db-group-create) td {
+  overflow: visible;
+}
+.database-v2 .db-group-toggle,
+.database-v2 .db-group-create .db-new-row {
+  position: sticky;
+  left: var(--space-2);
+  width: fit-content;
+  max-width: calc(100cqw - var(--space-4));
+}
+.db-filter-panel {
+  width: min(420px, calc(100vw - 24px));
+}
+.database-v2 .db-date-trigger {
+  min-height: 42px;
+}
+.db-date-trigger {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+.db-date-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db-date-trigger > svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.db-date-fields {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  align-items: end;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.db-date-fields .text-input {
+  width: 100%;
+  min-width: 0;
+}
+.db-date-fields .field-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.db-add-body {
+  margin-bottom: var(--space-2);
+}
+.db-body-popover {
+  width: min(540px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3);
+}
+.db-body-editor {
+  min-height: 100px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.db-body-editor .prose {
+  min-height: min(160px, 35dvh);
+}
+.db-body-editor:focus-within {
+  border-color: var(--accent);
+}
+
+/* 颜色矩阵按列对齐，窄屏等比收缩并允许短屏纵向滚动。 */
+.panel-popover.db-option-palette {
+  width: min(344px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  padding: var(--space-2);
+  overscroll-behavior: contain;
+}
+.db-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+.db-palette-cell {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.chip.db-option-swatch {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  padding: 0;
+  border-radius: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--text) 24%, transparent);
+}
+.db-palette-cell .db-option-swatch {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-sm) - 2px);
+}
+.db-palette-cell[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.db-palette-cell:hover,
+.db-palette-cell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.db-palette-caption {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.db-palette-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.db-palette-action:hover {
+  background: var(--hover);
+}
+.db-palette-more {
+  border-top: 1px solid var(--border);
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+.db-palette-more svg:last-child {
+  margin-inline-start: auto;
+}
+.db-palette-more[aria-expanded='true'] svg:last-child {
+  transform: rotate(90deg);
+}
+.db-palette-custom {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+.db-palette-custom input[type='color'] {
+  width: 36px;
+  height: 28px;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.db-palette-custom .field-error {
+  grid-column: 1 / -1;
+  margin: 0;
 }

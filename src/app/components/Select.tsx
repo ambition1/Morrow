@@ -1,6 +1,8 @@
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import type { OptionColor } from '../../core/model';
 import { foldText } from '../../core/search';
+import { optionColorAppearance } from './optionColors';
 import { Popover } from './Popover';
 import { t } from '../i18n';
 
@@ -9,6 +11,8 @@ export interface SelectOption<T extends string> {
   label: string;
   // a second line, such as who makes a model
   detail?: string;
+  // 颜色选项的可视色样，文字标签仍用于搜索与读屏。
+  color?: OptionColor;
 }
 
 // a dropdown drawn by morrow, the same on every system, with a search box once the list gets long
@@ -45,6 +49,9 @@ export function Select<T extends string>({
         onClick={(event) => setAnchor(anchor ? null : event.currentTarget)}
       >
         <span className={current || value ? '' : 'select-placeholder'}>
+          {current?.color && (
+            <span {...optionColorAppearance(current.color, 'select-color-swatch chip')} aria-hidden="true" />
+          )}
           {current?.label ?? value ?? placeholder}
         </span>
         <ChevronsUpDown size={14} />
@@ -121,6 +128,7 @@ function SelectList<T extends string>({
       onClose={onClose}
       label={label}
       className="select-popover"
+      fitViewport
       placement="bottom-end"
     >
       <div
@@ -157,6 +165,12 @@ function SelectList<T extends string>({
                 onMouseMove={() => index !== at && setActive(index)}
                 onClick={() => onPick(option.value)}
               >
+                {option.color && (
+                  <span
+                    {...optionColorAppearance(option.color, 'select-color-swatch chip')}
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="select-option-text">
                   <span>{option.label}</span>
                   {option.detail && <span className="select-option-detail">{option.detail}</span>}

@@ -1,7 +1,7 @@
 import { isRecord, validateDoc } from './doc';
 import { normalizeExtra } from './vault/frontmatter';
 import {
-  COLORS,
+  normalizeOptionColor,
   MAX_ICON_LENGTH,
   MAX_TITLE_LENGTH,
   PAGE_KINDS,
@@ -11,7 +11,6 @@ import {
   VIEW_TYPES,
 } from './model';
 import type {
-  ColorName,
   DatabaseDef,
   DocNode,
   FilterOp,
@@ -152,7 +151,7 @@ function normalizeProp(raw: Record<string, unknown>): PropDef | null {
       .map((option) => ({
         id: option.id as string,
         name: nameOf(option.name, ''),
-        color: COLORS.includes(option.color as ColorName) ? (option.color as ColorName) : 'gray',
+        color: normalizeOptionColor(option.color) ?? 'gray',
       })),
     ...(raw.type === 'formula' && typeof raw.formula === 'string'
       ? { formula: raw.formula.slice(0, 2000) }
@@ -180,6 +179,16 @@ function normalizeView(raw: Record<string, unknown>): ViewDef | null {
       const prop = propRef(sort.prop);
       return prop ? [{ prop, dir: sort.dir === 'desc' ? ('desc' as const) : ('asc' as const) }] : [];
     }),
+    // 仅保留有效字符串，兼容没有这些设置的旧视图。
+    columnOrder: Array.isArray(raw.columnOrder)
+      ? [...new Set(raw.columnOrder.filter((id): id is string => propRef(id) !== null))]
+      : [],
+    // 旧表格默认不显示正文列。
+    ...(raw.showBody === true ? { showBody: true } : {}),
+    groupDirection: raw.groupDirection === 'desc' ? 'desc' : 'asc',
+    collapsedGroups: Array.isArray(raw.collapsedGroups)
+      ? raw.collapsedGroups.filter((key): key is string => typeof key === 'string')
+      : [],
     groupBy: propRef(raw.groupBy),
     dateProp: propRef(raw.dateProp),
     hidden: Array.isArray(raw.hidden) ? raw.hidden.filter((id): id is string => propRef(id) !== null) : [],

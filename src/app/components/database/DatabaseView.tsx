@@ -17,6 +17,8 @@ import {
   GalleryVerticalEnd,
   LayoutList,
   Maximize2,
+  Ellipsis,
+  FileText,
   Plus,
   Settings2,
   Table2,
@@ -24,14 +26,17 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { dateKey } from '../../../core/daily';
 import {
   filterOpsFor,
   groupRows,
+  valueForGroup,
   propType,
   rowsOf,
   TITLE_PROP,
+  BODY_COLUMN,
   VIEW_LABELS,
   visibleRows,
   newView,
@@ -55,8 +60,13 @@ import type {
 import { fileUrl } from '../../platform/attachments';
 import { newId } from '../../platform/files';
 import { openPage } from '../../router';
+import { trashPage } from '../../operations';
+import { DateInput } from '../CalendarDatePicker';
+import { BodyCell } from './BodyCell';
 import { run, useWorkspace } from '../../workspace';
 import { Menu } from '../Menu';
+import { Select } from '../Select';
+import { optionColorAppearance } from '../optionColors';
 import { Popover } from '../Popover';
 import { Emoji } from '../Emoji';
 import { PageIcon } from '../Sidebar';
@@ -269,14 +279,15 @@ function ViewSettings({
           }
         />
       </label>
-      <label className="field">
+      <div className="field">
         <span>{t('slash.sections.layout')}</span>
-        <select
-          className="text-input small"
+        <Select<ViewType>
+          label={t('slash.sections.layout')}
           value={view.type}
-          onChange={(event) =>
+          options={VIEW_TYPES.map((type) => ({ value: type, label: viewLabel(type) }))}
+          onChange={(value) =>
             updateView(dbId, view.id, (current) => {
-              const type = event.target.value as ViewType;
+              const type = value;
               const fresh = newView(type, database, () => current.id);
               return {
                 ...current,
@@ -286,14 +297,8 @@ function ViewSettings({
               };
             })
           }
-        >
-          {VIEW_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {viewLabel(type)}
-            </option>
-          ))}
-        </select>
-      </label>
+        />
+      </div>
       <div className="popover-actions">
         <button
           type="button"
@@ -396,7 +401,7 @@ function Toolbar({
   const [panel, setPanel] = useState<{ kind: ToolPanel; anchor: HTMLElement } | null>(null);
   const open = (kind: ToolPanel) => (event: React.MouseEvent<HTMLElement>) =>
     setPanel({ kind, anchor: event.currentTarget });
-  const names = [{ id: TITLE_PROP, name: 'Name', type: 'text' as const }, ...database.properties];
+  const names = [{ id: TITLE_PROP, name: t('database.name'), type: 'text' as const }, ...database.properties];
   return (
     <div className="db-tools">
       <button
@@ -417,9 +422,9 @@ function Toolbar({
         <ArrowDownUp size={13} /> {t('database.sort')}
         {view.sorts.length ? ` ${view.sorts.length}` : ''}
       </button>
-      {(view.type === 'board' || view.type === 'calendar') && (
+      {(view.type === 'table' || view.type === 'board' || view.type === 'calendar') && (
         <button type="button" className="text-tool" onClick={open('layout')} disabled={!editable}>
-          <Settings2 size={13} /> {view.type === 'board' ? t('database.group') : t('database.date')}
+          <Settings2 size={13} /> {view.type !== 'calendar' ? t('database.group') : t('database.date')}
         </button>
       )}
       <button type="button" className="text-tool" onClick={open('properties')}>
@@ -430,7 +435,7 @@ function Toolbar({
           anchor={panel.anchor}
           onClose={() => setPanel(null)}
           label={t('database.filters')}
-          className="db-panel"
+          className="db-panel db-filter-panel"
         >
           {view.filters.length === 0 && <p className="muted small">{t('database.noFilters')}</p>}
           {view.filters.map((rule) => {
@@ -445,57 +450,51 @@ function Toolbar({
               }));
             return (
               <div key={rule.id} className="db-rule">
-                <select
-                  className="text-input small"
-                  aria-label={t('database.property')}
+                <Select
+                  label={t('database.property')}
                   value={rule.prop}
-                  onChange={(event) => {
-                    const nextType = propType(database, event.target.value) ?? 'text';
+                  options={names.map((item) => ({ value: item.id, label: item.name }))}
+                  onChange={(value) => {
+                    const nextType = propType(database, value) ?? 'text';
                     change({
-                      prop: event.target.value,
+                      prop: value,
                       op: filterOpsFor(nextType === 'title' ? 'text' : nextType)[0]!,
                       value: null,
                     });
                   }}
-                >
-                  {names.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="text-input small"
-                  aria-label={t('database.condition')}
+                />
+                <Select<FilterOp>
+                  label={t('database.condition')}
                   value={rule.op}
-                  onChange={(event) => change({ op: event.target.value as FilterOp })}
-                >
-                  {ops.map((op) => (
-                    <option key={op} value={op}>
-                      {filterLabel(op)}
-                    </option>
-                  ))}
-                </select>
+                  options={ops.map((op) => ({ value: op, label: filterLabel(op) }))}
+                  onChange={(value) => change({ op: value as FilterOp })}
+                />
                 {needsValue &&
                   (prop && (prop.type === 'select' || prop.type === 'multiSelect') ? (
-                    <select
-                      className="text-input small"
-                      aria-label={t('database.value')}
+                    <Select
+                      label={t('database.value')}
                       value={String(rule.value ?? '')}
-                      onChange={(event) => change({ value: event.target.value || null })}
-                    >
-                      <option value="">{t('database.choose')}</option>
-                      {prop.options.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: t('database.choose') },
+                        ...prop.options.map((option) => ({
+                          value: option.id,
+                          label: option.name,
+                          color: option.color,
+                        })),
+                      ]}
+                      onChange={(value) => change({ value: value || null })}
+                    />
+                  ) : type === 'date' ? (
+                    <DateInput
+                      label={t('database.value')}
+                      value={typeof rule.value === 'string' ? rule.value : null}
+                      onChange={(value) => change({ value })}
+                    />
                   ) : (
                     <input
                       className="text-input small"
                       aria-label={t('database.value')}
-                      type={prop?.type === 'number' ? 'number' : prop?.type === 'date' ? 'date' : 'text'}
+                      type={prop?.type === 'number' ? 'number' : 'text'}
                       value={rule.value === null ? '' : String(rule.value)}
                       onChange={(event) =>
                         change({
@@ -547,45 +546,37 @@ function Toolbar({
           {view.sorts.length === 0 && <p className="muted small">{t('database.noSorts')}</p>}
           {view.sorts.map((sort, index) => (
             <div key={`${sort.prop}-${index}`} className="db-rule">
-              <select
-                className="text-input small"
-                aria-label={t('database.sortBy')}
+              <Select
+                label={t('database.sortBy')}
                 value={sort.prop}
-                onChange={(event) =>
-                  updateView(dbId, view.id, (current) => ({
-                    ...current,
-                    sorts: current.sorts.map((item, i) =>
-                      i === index ? { ...item, prop: event.target.value } : item,
-                    ),
-                  }))
-                }
-              >
-                {[
+                options={[
                   ...names,
                   { id: 'created', name: t('database.created') },
                   { id: 'updated', name: t('database.edited') },
-                ].map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="text-input small"
-                aria-label={t('database.direction')}
+                ].map((item) => ({ value: item.id, label: item.name }))}
+                onChange={(value) =>
+                  updateView(dbId, view.id, (current) => ({
+                    ...current,
+                    sorts: current.sorts.map((item, i) => (i === index ? { ...item, prop: value } : item)),
+                  }))
+                }
+              />
+              <Select<'asc' | 'desc'>
+                label={t('database.direction')}
                 value={sort.dir}
-                onChange={(event) =>
+                options={[
+                  { value: 'asc', label: t('database.ascending') },
+                  { value: 'desc', label: t('database.descending') },
+                ]}
+                onChange={(value) =>
                   updateView(dbId, view.id, (current) => ({
                     ...current,
                     sorts: current.sorts.map((item, i) =>
-                      i === index ? { ...item, dir: event.target.value === 'desc' ? 'desc' : 'asc' } : item,
+                      i === index ? { ...item, dir: value === 'desc' ? 'desc' : 'asc' } : item,
                     ),
                   }))
                 }
-              >
-                <option value="asc">{t('database.ascending')}</option>
-                <option value="desc">{t('database.descending')}</option>
-              </select>
+              />
               <button
                 type="button"
                 className="icon-button tiny"
@@ -622,33 +613,49 @@ function Toolbar({
           label={t('slash.sections.layout')}
           className="db-panel"
         >
-          <label className="field">
-            <span>{view.type === 'board' ? t('database.groupCardsBy') : t('database.placeRowsBy')}</span>
-            <select
-              className="text-input small"
-              value={(view.type === 'board' ? view.groupBy : view.dateProp) ?? ''}
-              onChange={(event) =>
+          {/* 复用属性设置的选择组件，统一浮层、选中标记与键盘交互。 */}
+          <div className="field">
+            <span>{view.type !== 'calendar' ? t('database.group') : t('database.placeRowsBy')}</span>
+            <Select
+              label={view.type !== 'calendar' ? t('database.group') : t('database.placeRowsBy')}
+              value={(view.type !== 'calendar' ? view.groupBy : view.dateProp) ?? ''}
+              disabled={!editable}
+              options={[
+                { value: '', label: t('database.none') },
+                ...database.properties
+                  .filter((prop) =>
+                    view.type !== 'calendar'
+                      ? ['select', 'multiSelect', 'checkbox'].includes(prop.type)
+                      : prop.type === 'date',
+                  )
+                  .map((prop) => ({ value: prop.id, label: prop.name })),
+              ]}
+              onChange={(value) =>
                 updateView(dbId, view.id, (current) =>
-                  current.type === 'board'
-                    ? { ...current, groupBy: event.target.value || null }
-                    : { ...current, dateProp: event.target.value || null },
+                  current.type !== 'calendar'
+                    ? { ...current, groupBy: value || null }
+                    : { ...current, dateProp: value || null },
                 )
               }
-            >
-              <option value="">{t('database.none')}</option>
-              {database.properties
-                .filter((prop) =>
-                  view.type === 'board'
-                    ? ['select', 'multiSelect', 'checkbox'].includes(prop.type)
-                    : prop.type === 'date',
-                )
-                .map((prop) => (
-                  <option key={prop.id} value={prop.id}>
-                    {prop.name}
-                  </option>
-                ))}
-            </select>
-          </label>
+            />
+          </div>
+          {view.type === 'table' && (
+            <div className="field">
+              <span>{t('database.direction')}</span>
+              <Select<'asc' | 'desc'>
+                label={t('database.direction')}
+                value={view.groupDirection ?? 'asc'}
+                disabled={!editable}
+                options={[
+                  { value: 'asc', label: t('database.ascending') },
+                  { value: 'desc', label: t('database.descending') },
+                ]}
+                onChange={(groupDirection) =>
+                  updateView(dbId, view.id, (current) => ({ ...current, groupDirection }))
+                }
+              />
+            </div>
+          )}
         </Popover>
       )}
       {panel?.kind === 'properties' && (
@@ -659,6 +666,27 @@ function Toolbar({
           className="db-panel"
         >
           <ul className="db-prop-list">
+            {view.type === 'table' && (
+              <li>
+                <span className="db-prop-name">{t('database.bodyColumn')}</span>
+                <button
+                  type="button"
+                  className="icon-button tiny"
+                  aria-label={t(view.showBody ? 'database.hideProp' : 'database.showProp', {
+                    name: t('database.bodyColumn'),
+                  })}
+                  disabled={!editable}
+                  onClick={() =>
+                    updateView(dbId, view.id, (current) => ({
+                      ...current,
+                      showBody: !current.showBody,
+                    }))
+                  }
+                >
+                  {view.showBody ? <Eye size={13} /> : <EyeOff size={13} />}
+                </button>
+              </li>
+            )}
             {database.properties.map((prop) => {
               const hidden = view.hidden.includes(prop.id);
               return (
@@ -737,8 +765,12 @@ interface ViewProps {
 }
 
 function RowTitle({ row, editable, autoFocus }: { row: PageMeta; editable: boolean; autoFocus?: boolean }) {
+  // 每行独立操作菜单，触屏和键盘均可找到回收站入口。
+  const [actions, setActions] = useState<HTMLButtonElement | null>(null);
+  // 菜单名称包含当前行标题，便于区分多条记录。
+  const actionLabel = t('database.recordActions', { title: displayTitle(row) });
   return (
-    <div className="db-title">
+    <div className="db-title" title={displayTitle(row)}>
       <span className="tree-icon">
         <PageIcon page={row} />
       </span>
@@ -761,6 +793,33 @@ function RowTitle({ row, editable, autoFocus }: { row: PageMeta; editable: boole
       >
         <Maximize2 size={13} />
       </button>
+      {editable && (
+        <button
+          type="button"
+          className="icon-button tiny db-row-actions"
+          aria-label={actionLabel}
+          aria-haspopup="menu"
+          aria-expanded={Boolean(actions)}
+          onClick={(event) => setActions(event.currentTarget)}
+        >
+          <Ellipsis size={14} />
+        </button>
+      )}
+      {actions && (
+        <Menu
+          anchor={actions}
+          label={actionLabel}
+          onClose={() => setActions(null)}
+          entries={[
+            {
+              label: t('database.deleteRecord'),
+              icon: Trash2,
+              danger: true,
+              onSelect: () => trashPage(row.id),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }
@@ -792,9 +851,11 @@ function ColumnResizer({
         const handle = event.currentTarget;
         handle.setPointerCapture(event.pointerId);
         const start = event.clientX;
+        // 使用实际渲染宽度，窄屏名称列被限宽后仍能正常缩放。
+        const startWidth = handle.closest('th')?.getBoundingClientRect().width ?? width;
         let next = width;
         const move = (moved: PointerEvent) => {
-          next = Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, width + moved.clientX - start));
+          next = Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, startWidth + moved.clientX - start));
           onResize(next);
         };
         const up = () => {
@@ -834,7 +895,8 @@ function PropertyTypeIcon({ prop }: { prop: PropDef }) {
 }
 
 function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
-  const [header, setHeader] = useState<{ prop: PropDef; anchor: HTMLElement } | null>(null);
+  // 正文列和自定义属性复用表头的打开状态。
+  const [header, setHeader] = useState<{ prop: PropDef | null; anchor: HTMLElement } | null>(null);
   const [adding, setAdding] = useState<HTMLElement | null>(null);
   const [focusNew, setFocusNew] = useState<string | null>(null);
   // the width being dragged, saved to the view once the drag ends
@@ -861,18 +923,66 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
         onReset={() => saveWidth(key, null)}
       />
     );
-  const total =
-    44 + widthOf(TITLE_PROP) + props.reduce((sum, prop) => sum + widthOf(prop.id), 0) + (editable ? 36 : 0);
+  // 只读视图的折叠交互仅保存在当前组件。
+  const [readonlyCollapsed, setReadonlyCollapsed] = useState<string[]>([]);
+  // 名称列始终固定在序号右侧，其他列沿用用户顺序。
+  const columns = [
+    TITLE_PROP,
+    ...[...props.map((prop) => prop.id), ...(view.showBody ? [BODY_COLUMN] : [])].sort((a, b) => {
+      // 未配置的列保持原有相对顺序。
+      const order = view.columnOrder ?? [];
+      return (
+        (order.includes(a) ? order.indexOf(a) : order.length) -
+        (order.includes(b) ? order.indexOf(b) : order.length)
+      );
+    }),
+  ];
+  // 分组沿用看板的选项顺序和多选语义，空值组仅在有记录时显示。
+  const groups = view.groupBy
+    ? groupRows(rows, view.groupBy, database).filter((group) => group.key !== null || group.rows.length > 0)
+    : [{ key: null, label: '', color: 'gray' as const, rows }];
+  if (view.groupDirection === 'desc') groups.reverse();
+  // 按完整列序移动，隐藏列的位置也保留在视图设置内。
+  const moveColumn = (source: string, target: string) => {
+    if (
+      !editable ||
+      source === target ||
+      source === TITLE_PROP ||
+      target === TITLE_PROP ||
+      !columns.includes(source) ||
+      !columns.includes(target)
+    )
+      return;
+    updateView(dbId, view.id, (current) => {
+      // 去除失效属性并为新属性补齐位置。
+      const available = [...database.properties.map((prop) => prop.id), BODY_COLUMN];
+      // 根据已保存的列序还原完整序列。
+      const order = [...new Set([...(current.columnOrder ?? []), ...available])].filter((id) =>
+        available.includes(id),
+      );
+      // 使用移除前的目标位置，左右移动均可到达相邻列。
+      const targetIndex = order.indexOf(target);
+      order.splice(order.indexOf(source), 1);
+      order.splice(targetIndex, 0, source);
+      return { ...current, columnOrder: order };
+    });
+  };
+  // 名称列按表格容器限宽，窄分栏仍能看到部分横向滚动内容。
+  const otherWidth = 44 + columns.slice(1).reduce((sum, key) => sum + widthOf(key), 0) + (editable ? 36 : 0);
   return (
-    <div className="db-table-wrap">
-      <table className={`db-table${editable ? ' is-filled' : ''}`} style={{ width: total }}>
+    <div
+      className={`db-table-wrap${view.groupBy ? ' is-grouped' : ''}`}
+      style={{ '--db-saved-title-width': `${widthOf(TITLE_PROP)}px` } as CSSProperties}
+    >
+      <table
+        className={`db-table${editable ? ' is-filled' : ''}`}
+        style={{ width: `calc(${otherWidth}px + var(--db-title-width))` }}
+      >
         <colgroup>
           <col style={{ width: 44 }} />
-          <col style={{ width: widthOf(TITLE_PROP) }} />
-          {props.map((prop) => (
-            <col key={prop.id} style={{ width: widthOf(prop.id) }} />
+          {columns.map((key) => (
+            <col key={key} style={{ width: key === TITLE_PROP ? 'var(--db-title-width)' : widthOf(key) }} />
           ))}
-          {/* the add column takes whatever room is left, so the others keep the width they were given */}
           {editable && <col />}
         </colgroup>
         <thead>
@@ -880,25 +990,58 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
             <th scope="col" className="db-row-number" aria-label={t('database.rowNumber')}>
               #
             </th>
-            <th scope="col" className="db-col-title">
-              <span className="db-heading-label">
-                <Type size={14} /> {t('database.name')}
-              </span>
-              {resizer(TITLE_PROP)}
-            </th>
-            {props.map((prop) => (
-              <th key={prop.id} scope="col">
-                <button
-                  type="button"
-                  className="db-header"
-                  disabled={!editable}
-                  onClick={(event) => setHeader({ prop, anchor: event.currentTarget })}
+            {columns.map((key, index) => {
+              // 当前表头对应的属性，名称列使用内置图标与标签。
+              const prop = props.find((item) => item.id === key);
+              return (
+                <th
+                  key={key}
+                  scope="col"
+                  className={key === TITLE_PROP ? 'db-col-title' : undefined}
+                  draggable={editable && key !== TITLE_PROP}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData('application/x-morrow-column', key);
+                    event.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(event) => {
+                    if (
+                      editable &&
+                      key !== TITLE_PROP &&
+                      event.dataTransfer.types.includes('application/x-morrow-column')
+                    )
+                      event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    moveColumn(event.dataTransfer.getData('application/x-morrow-column'), key);
+                  }}
                 >
-                  <PropertyTypeIcon prop={prop} /> {prop.name}
-                </button>
-                {resizer(prop.id)}
-              </th>
-            ))}
+                  {key === TITLE_PROP ? (
+                    <span className="db-header">
+                      <Type size={14} /> {t('database.name')}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="db-header"
+                      disabled={!editable}
+                      onKeyDown={(event) => {
+                        if (!event.altKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                        event.preventDefault();
+                        // Alt 加方向键为键盘用户提供同等列移动能力。
+                        const target = columns[index + (event.key === 'ArrowLeft' ? -1 : 1)];
+                        if (target) moveColumn(key, target);
+                      }}
+                      onClick={(event) => setHeader({ prop: prop ?? null, anchor: event.currentTarget })}
+                    >
+                      {prop ? <PropertyTypeIcon prop={prop} /> : <FileText size={14} />}{' '}
+                      {prop?.name ?? t('database.bodyColumn')}
+                    </button>
+                  )}
+                  {resizer(key)}
+                </th>
+              );
+            })}
             {editable && (
               <th className="db-col-add">
                 <button
@@ -914,23 +1057,119 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
-            <tr key={row.id}>
-              <td className="db-row-number">{index + 1}</td>
-              <td className="db-col-title">
-                <RowTitle row={row} editable={editable} autoFocus={focusNew === row.id} />
-              </td>
-              {props.map((prop) => (
-                <td key={prop.id}>
-                  <PropertyInput dbId={dbId} prop={prop} row={row} editable={editable} tableCell />
-                </td>
-              ))}
-              {editable && <td />}
-            </tr>
-          ))}
+          {groups.map((group) => {
+            // JSON 编码避免空值与真实选项键冲突。
+            const key = JSON.stringify(group.key);
+            // 折叠状态按视图保存，刷新后保持。
+            const collapsed = (editable ? (view.collapsedGroups ?? []) : readonlyCollapsed).includes(key);
+            return (
+              <Fragment key={key}>
+                {/* 空白分隔行仅用于视觉区分，不参与记录计数。 */}
+                {view.groupBy && (
+                  <tr className="db-group-gap" aria-hidden="true">
+                    <td colSpan={columns.length + 1 + Number(editable)} />
+                  </tr>
+                )}
+                {view.groupBy && (
+                  <tr className="db-group-row">
+                    <td colSpan={columns.length + 1 + Number(editable)}>
+                      <button
+                        type="button"
+                        className="db-group-toggle"
+                        aria-expanded={!collapsed}
+                        onClick={() =>
+                          editable
+                            ? updateView(dbId, view.id, (current) => ({
+                                ...current,
+                                collapsedGroups: collapsed
+                                  ? (current.collapsedGroups ?? []).filter((item) => item !== key)
+                                  : [...(current.collapsedGroups ?? []), key],
+                              }))
+                            : setReadonlyCollapsed((current) =>
+                                collapsed ? current.filter((item) => item !== key) : [...current, key],
+                              )
+                        }
+                      >
+                        <ChevronRight
+                          size={14}
+                          style={{ transform: collapsed ? undefined : 'rotate(90deg)' }}
+                        />
+                        <Chip
+                          option={{
+                            name:
+                              group.key === null
+                                ? t('database.emptyValue')
+                                : database.properties.find((prop) => prop.id === view.groupBy)?.type ===
+                                    'checkbox'
+                                  ? t(
+                                      group.key === 'true'
+                                        ? 'database.filterChecked'
+                                        : 'database.filterUnchecked',
+                                    )
+                                  : group.label,
+                            color: group.color,
+                          }}
+                        />
+                        <span className="muted small">{tp('database.rows', group.rows.length)}</span>
+                      </button>
+                    </td>
+                  </tr>
+                )}
+                {(!view.groupBy || !collapsed) &&
+                  group.rows.map((row, index) => (
+                    <tr key={row.id}>
+                      <td className="db-row-number">{index + 1}</td>
+                      {columns.map((column) => {
+                        // 按表头顺序渲染单元格，避免拖动后值与标题错位。
+                        const prop = props.find((item) => item.id === column);
+                        return (
+                          <td key={column} className={column === TITLE_PROP ? 'db-col-title' : undefined}>
+                            {prop ? (
+                              <PropertyInput
+                                dbId={dbId}
+                                prop={prop}
+                                row={row}
+                                editable={editable}
+                                tableCell
+                              />
+                            ) : column === BODY_COLUMN ? (
+                              <BodyCell row={row} editable={editable} />
+                            ) : (
+                              <RowTitle row={row} editable={editable} autoFocus={focusNew === row.id} />
+                            )}
+                          </td>
+                        );
+                      })}
+                      {editable && <td />}
+                    </tr>
+                  ))}
+                {view.groupBy && !collapsed && editable && (
+                  <tr className="db-group-create">
+                    <td colSpan={columns.length + 1 + Number(editable)}>
+                      <button
+                        type="button"
+                        className="db-new-row"
+                        aria-label={`${t('database.new')} · ${group.label}`}
+                        onClick={() => {
+                          // 读取真实分组属性，避免新记录落入未分组区域。
+                          const prop = database.properties.find((item) => item.id === view.groupBy);
+                          if (!prop) return;
+                          // 创建后保持表格内编辑并聚焦名称。
+                          const id = createRow(dbId, { [prop.id]: valueForGroup(prop, group.key) });
+                          if (id) setFocusNew(id);
+                        }}
+                      >
+                        <Plus size={14} /> {t('database.new')}
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
-      {editable && (
+      {editable && !view.groupBy && (
         <button
           type="button"
           className="db-new-row"
@@ -942,7 +1181,7 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           <Plus size={14} /> {t('database.new')}
         </button>
       )}
-      {header && (
+      {header?.prop && (
         <PropertySettings
           dbId={dbId}
           database={database}
@@ -952,6 +1191,20 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           onClose={() => setHeader(null)}
         />
       )}
+      {header && !header.prop && (
+        <Menu
+          anchor={header.anchor}
+          label={t('database.bodyColumn')}
+          onClose={() => setHeader(null)}
+          entries={[
+            {
+              label: t('database.hide'),
+              icon: EyeOff,
+              onSelect: () => updateView(dbId, view.id, (current) => ({ ...current, showBody: false })),
+            },
+          ]}
+        />
+      )}
       {adding && (
         <Popover
           anchor={adding}
@@ -959,6 +1212,19 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           label={t('database.newProperty')}
           className="db-panel"
         >
+          {!view.showBody && (
+            <button
+              type="button"
+              className="button small db-add-body"
+              onClick={() => {
+                updateView(dbId, view.id, (current) => ({ ...current, showBody: true }));
+                adding.focus({ preventScroll: true });
+                setAdding(null);
+              }}
+            >
+              <FileText size={13} /> {t('database.addBodyColumn')}
+            </button>
+          )}
           <NewProperty dbId={dbId} database={database} onDone={() => setAdding(null)} />
         </Popover>
       )}
@@ -1066,7 +1332,7 @@ function BoardView({ dbId, database, view, rows, props, editable }: ViewProps) {
         return (
           <section
             key={key}
-            className={`db-column color-${group.color ?? 'gray'}${over === key ? ' is-over' : ''}`}
+            {...optionColorAppearance(group.color, `db-column${over === key ? ' is-over' : ''}`, false)}
             aria-label={group.label}
             onDragOver={(event) => {
               if (!editable || !event.dataTransfer.types.includes(DRAG)) return;

@@ -1,3 +1,6 @@
+import { Select } from '../Select';
+import { optionColorAppearance } from '../optionColors';
+import { DateInput } from '../CalendarDatePicker';
 import { Check, ExternalLink, Plus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { formatValue, formulaResult } from '../../../core/database';
@@ -9,6 +12,7 @@ import { PageIcon } from '../Sidebar';
 import { PROP_TYPES } from '../../../core/model';
 import { reservedPropertyName } from '../../../core/vault/pageFile';
 import { newId } from '../../platform/files';
+import { inlineDateCalendarDate } from '../../../core/inlineDate';
 import { dateLocale, t } from '../../i18n';
 import { toast } from '../../ui';
 import type {
@@ -26,7 +30,7 @@ import { ensureOption, setValue, updateDatabase } from './data';
 import { propLabel } from '../../i18n/labels';
 
 export function Chip({ option }: { option: Pick<SelectOption, 'name' | 'color'> }) {
-  return <span className={`chip color-${option.color}`}>{option.name}</span>;
+  return <span {...optionColorAppearance(option.color, 'chip')}>{option.name}</span>;
 }
 
 // a value shown on a card or in a list, never editable
@@ -113,10 +117,16 @@ export function RelationChips({ targets }: { targets: string[] }) {
 }
 
 export function formatDay(key: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
-  if (!match) return key;
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return date.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  // 低位年份与夏令时使用同一个无时区日历载体。
+  const date = inlineDateCalendarDate(key);
+  return (
+    date?.toLocaleDateString(dateLocale(), {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }) ?? key
+  );
 }
 
 // the editor for one value of one row, used in table cells and on row pages
@@ -138,7 +148,7 @@ export function PropertyInput({
   const [picker, setPicker] = useState<HTMLElement | null>(null);
   const label = t('properties.valueOf', { key: prop.name, title: displayTitle(row) });
 
-  if (tableCell && ['text', 'number', 'date', 'url'].includes(prop.type)) {
+  if (tableCell && ['text', 'number', 'url'].includes(prop.type)) {
     return <TableValueEditor prop={prop} row={row} editable={editable} />;
   }
 
@@ -205,13 +215,11 @@ export function PropertyInput({
     }
     case 'date':
       return (
-        <input
-          type="date"
-          className="prop-input"
-          aria-label={label}
-          value={typeof value === 'string' ? value : ''}
-          disabled={!editable}
-          onChange={(event) => setValue(row.id, prop.id, event.target.value || null)}
+        <DateInput
+          label={label}
+          value={typeof value === 'string' ? value : null}
+          editable={editable}
+          onChange={(date) => setValue(row.id, prop.id, date)}
         />
       );
     case 'url':
@@ -331,15 +339,7 @@ function TableValueEditor({ prop, row, editable }: { prop: PropDef; row: PageMet
       }}
     >
       <DraftInput
-        type={
-          prop.type === 'number'
-            ? 'number'
-            : prop.type === 'date'
-              ? 'date'
-              : prop.type === 'url'
-                ? 'url'
-                : 'text'
-        }
+        type={prop.type === 'number' ? 'number' : prop.type === 'url' ? 'url' : 'text'}
         label={label}
         value={value === null ? '' : String(value)}
         editable={editable}
@@ -380,7 +380,7 @@ export function DraftInput({
   autoFocus,
   onDone,
 }: {
-  type: 'text' | 'number' | 'url' | 'date';
+  type: 'text' | 'number' | 'url';
   label: string;
   value: string;
   editable: boolean;
@@ -581,18 +581,12 @@ export function NewProperty({
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      <select
-        className="text-input small"
-        aria-label={t('database.type')}
+      <Select<PropType>
+        label={t('database.type')}
         value={type}
-        onChange={(event) => setType(event.target.value as PropType)}
-      >
-        {PROP_TYPES.map((item) => (
-          <option key={item} value={item}>
-            {propLabel(item)}
-          </option>
-        ))}
-      </select>
+        options={PROP_TYPES.map((item) => ({ value: item, label: propLabel(item) }))}
+        onChange={setType}
+      />
       <button type="submit" className="button small" disabled={!name.trim()}>
         {t('common.add')}
       </button>

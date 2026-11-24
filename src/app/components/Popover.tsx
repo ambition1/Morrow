@@ -1,4 +1,4 @@
-import { computePosition, flip, offset, shift } from '@floating-ui/dom';
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import type { Placement } from '@floating-ui/dom';
 import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
@@ -51,10 +51,9 @@ export function Popover({
           element.querySelector<HTMLElement>('input, select, button')
         )?.focus();
       });
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(element);
-    return () => observer.disconnect();
+    // 同步跟随触发控件、滚动容器和窗口尺寸，避免窄屏切换后菜单停在旧位置。
+    const stopUpdating = autoUpdate(reference, element, place);
+    return stopUpdating;
   }, [anchor, placement, fitViewport]);
 
   useEffect(() => {
@@ -68,6 +67,9 @@ export function Popover({
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
+      // 嵌套选择菜单只关闭最上层浮层，保留筛选、排序等外层设置。
+      const layers = document.querySelectorAll('.floating-layer');
+      if (layers[layers.length - 1] !== ref.current) return;
       event.stopPropagation();
       closeRef.current();
       if (trigger?.isConnected) trigger.focus({ preventScroll: true });

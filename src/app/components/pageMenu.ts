@@ -74,7 +74,7 @@ export function pageMenuEntries(pageId: PageId, rename: () => void): MenuEntry[]
       icon: Network,
       onSelect: () => navigate({ name: 'graph', focus: pageId }),
     },
-    ...(page.kind === 'page'
+    ...(page.kind === 'page' || page.kind === 'database'
       ? [
           {
             label: t('pageMenu.saveAsTemplate'),

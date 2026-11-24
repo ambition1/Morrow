@@ -1,6 +1,14 @@
 // names the core layer keeps in english, translated where they are shown
 import { VIEW_LABELS } from '../../core/database';
-import type { ColorName, FilterOp, PageMeta, PropType, ViewDef, ViewType } from '../../core/model';
+import type {
+  OptionColor,
+  OPTION_COLORS,
+  FilterOp,
+  PageMeta,
+  PropType,
+  ViewDef,
+  ViewType,
+} from '../../core/model';
 import { t } from './index';
 import type { TranslationKey } from './types';
 
@@ -37,7 +45,7 @@ const FILTER: Record<FilterOp, TranslationKey> = {
   unchecked: 'database.filterUnchecked',
 };
 
-const COLOR: Record<ColorName, TranslationKey> = {
+const COLOR: Record<(typeof OPTION_COLORS)[number], TranslationKey> = {
   gray: 'colors.gray',
   brown: 'colors.brown',
   orange: 'colors.orange',
@@ -47,12 +55,23 @@ const COLOR: Record<ColorName, TranslationKey> = {
   purple: 'colors.purple',
   pink: 'colors.pink',
   red: 'colors.red',
+  slate: 'colors.slate',
+  amber: 'colors.amber',
+  lime: 'colors.lime',
+  teal: 'colors.teal',
+  cyan: 'colors.cyan',
+  indigo: 'colors.indigo',
+  violet: 'colors.violet',
+  rose: 'colors.rose',
+  burgundy: 'colors.burgundy',
 };
 
 export const propLabel = (type: PropType): string => t(PROP[type]);
 export const viewLabel = (type: ViewType): string => t(VIEW[type]);
 export const filterLabel = (op: FilterOp): string => t(FILTER[op]);
-export const colorLabel = (color: ColorName): string => t(COLOR[color]);
+// 预设色显示本地化名称，自定义色显示可复制的 HEX 值。
+export const colorLabel = (color: OptionColor): string =>
+  color.startsWith('#') ? color : t(COLOR[color as keyof typeof COLOR]);
 
 // a view still called by its english default shows that name translated, a name someone typed stays as typed
 export function viewName(view: Pick<ViewDef, 'name' | 'type'>): string {

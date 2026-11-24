@@ -2,8 +2,8 @@ import { EyeOff, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import type { Command } from '../../../core/commands';
 import { convertValue, formatValue, formulaResult, optionsFromValues, rowsOf } from '../../../core/database';
-import { COLORS, PROP_TYPES } from '../../../core/model';
-import type { ColorName, DatabaseDef, PageId, PropDef, PropType, ViewDef } from '../../../core/model';
+import { PROP_TYPES } from '../../../core/model';
+import type { DatabaseDef, PageId, PropDef, PropType, ViewDef } from '../../../core/model';
 import { reservedPropertyName } from '../../../core/vault/pageFile';
 import { newId } from '../../platform/files';
 import { toast } from '../../ui';
@@ -11,10 +11,11 @@ import { runAll, useWorkspace } from '../../workspace';
 import { Popover } from '../Popover';
 import { Select } from '../Select';
 import { updateDatabase, updateProp, updateView } from './data';
+import { OptionColorPicker } from './OptionColorPicker';
 import { DraftInput } from './PropertyValue';
 import { t } from '../../i18n';
 import { tr } from '../../i18n/rich';
-import { colorLabel, propLabel } from '../../i18n/labels';
+import { propLabel } from '../../i18n/labels';
 
 // rename a property, change its type, options or how it shows. opened from a column, or from a page's
 // properties, where there is no view to sort or hide in
@@ -176,10 +177,9 @@ export function PropertySettings({
                   }))
                 }
               />
-              <Select<ColorName>
-                label={t('editor.colour')}
+              <OptionColorPicker
                 value={option.color}
-                options={COLORS.map((color) => ({ value: color, label: colorLabel(color) }))}
+                fieldOptions={prop.options}
                 onChange={(color) =>
                   updateProp(dbId, prop.id, (current) => ({
                     ...current,

@@ -42,10 +42,36 @@ export const COLORS = [
 ] as const;
 export type ColorName = (typeof COLORS)[number];
 
+// 数据库标签扩展色板，编辑器与普通标签继续使用原调色板。
+export const OPTION_COLORS = [
+  ...COLORS,
+  'slate',
+  'amber',
+  'lime',
+  'teal',
+  'cyan',
+  'indigo',
+  'violet',
+  'rose',
+  'burgundy',
+] as const;
+// 单选和多选选项支持的颜色名称。
+export type OptionColor = (typeof OPTION_COLORS)[number] | `#${string}`;
+
+/** 匹配完整的 sRGB 色值，供数据库存储和 MCP 输入共同使用。 */
+export const OPTION_HEX_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/** 保留已存储的主题色名，将自定义色值统一为大写。 */
+export function normalizeOptionColor(value: unknown): OptionColor | null {
+  if (typeof value !== 'string') return null;
+  if ((OPTION_COLORS as readonly string[]).includes(value)) return value as OptionColor;
+  return OPTION_HEX_PATTERN.test(value) ? (value.toUpperCase() as OptionColor) : null;
+}
+
 export interface SelectOption {
   id: string;
   name: string;
-  color: ColorName;
+  color: OptionColor;
 }
 
 export interface PropDef {
@@ -91,6 +117,14 @@ export interface ViewDef {
   hidden: string[];
   // table column widths in pixels, by property id or title, missing means the default width
   widths?: Record<string, number>;
+  // 当前视图可移动列的顺序，兼容旧配置中的名称列。
+  columnOrder?: string[];
+  // 表格可选的正文列直接读写行文档。
+  showBody?: boolean;
+  // 表格分组的排列方向。
+  groupDirection?: 'asc' | 'desc';
+  // 已折叠分组的键，使用 JSON 编码区分空值。
+  collapsedGroups?: string[];
 }
 
 export interface DatabaseDef {

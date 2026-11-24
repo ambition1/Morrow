@@ -3,7 +3,7 @@ import { dueRecurrences, LAST_KEY, periodStart, withRecurrence } from '../core/r
 import type { Repeat } from '../core/recurring';
 import { displayTitle } from './i18n/labels';
 import type { PageId } from '../core/model';
-import { applyTemplate, fillTemplate, hasPlaceholder } from '../core/templates';
+import { applyTemplate, fillTemplate, hasPlaceholder, templateDatabaseFields } from '../core/templates';
 import { isEffectivelyTrashed } from '../core/tree';
 import { newId } from './platform/files';
 import { openPage } from './router';
@@ -42,6 +42,7 @@ export function makeDuePages(now = new Date()): void {
         title,
         icon: template.icon,
         tags: template.tags,
+        ...templateDatabaseFields(template),
         doc: applyTemplate(state.docs[template.id] ?? { type: 'doc', content: [{ type: 'paragraph' }] }, {
           title,
           date: periodStart(recurrence.repeat, now),

@@ -2,7 +2,7 @@
 import { dailyTitle, parseDateKey } from '../daily';
 import { isRecord } from '../doc';
 import { normalizeDatabase } from '../migrations';
-import { COLORS, displayTitle, MAX_ICON_LENGTH, MAX_TITLE_LENGTH, validCover } from '../model';
+import { OPTION_COLORS, displayTitle, MAX_ICON_LENGTH, MAX_TITLE_LENGTH, validCover } from '../model';
 import type { DatabaseDef, PageKind, PageMeta, PropDef, PropValue, SelectOption } from '../model';
 import {
   findKey,
@@ -198,7 +198,7 @@ export function readProperty(
     const option: SelectOption = {
       id: newOptionId(),
       name: name.slice(0, 200),
-      color: COLORS[(prop.options.length + added.length) % COLORS.length]!,
+      color: OPTION_COLORS[(prop.options.length + added.length) % OPTION_COLORS.length]!,
     };
     added.push(option);
     return option.id;
@@ -296,6 +296,11 @@ function databaseToYaml(database: DatabaseDef): Record<string, unknown> {
       type: view.type,
       ...(view.filters.length ? { filters: view.filters.map((filter) => ({ ...filter })) } : {}),
       ...(view.sorts.length ? { sorts: view.sorts.map((sort) => ({ ...sort })) } : {}),
+      // 将视图布局写入 Markdown，保证重新打开后恢复。
+      ...(view.columnOrder?.length ? { columnOrder: [...view.columnOrder] } : {}),
+      ...(view.showBody ? { showBody: true } : {}),
+      ...(view.groupDirection ? { groupDirection: view.groupDirection } : {}),
+      ...(view.collapsedGroups?.length ? { collapsedGroups: [...view.collapsedGroups] } : {}),
       ...(view.groupBy ? { groupBy: view.groupBy } : {}),
       ...(view.dateProp ? { dateProp: view.dateProp } : {}),
       ...(view.hidden.length ? { hidden: [...view.hidden] } : {}),

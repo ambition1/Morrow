@@ -252,7 +252,7 @@ describe('reading stored data', () => {
                 id: 'status',
                 name: 'Status',
                 type: 'select',
-                options: [{ id: 'opt1', name: 'Read', color: 'teal' }],
+                options: [{ id: 'opt1', name: 'Read', color: 'invalid-color' }],
               },
               { id: 'weird', name: 'Weird', type: 'spreadsheet' },
             ],
@@ -261,6 +261,10 @@ describe('reading stored data', () => {
                 id: 'v1',
                 name: 'All',
                 type: 'table',
+                // 验证列序、分组方向和折叠状态经过规范化后保留。
+                columnOrder: ['status', 'title', 'status', 5],
+                groupDirection: 'desc',
+                collapsedGroups: ['null', '"opt1"', 7],
                 filters: [{ id: 'f', prop: 'status', op: 'is', value: 'opt1' }],
               },
               { id: 'v2', type: 'timeline' },
@@ -285,6 +289,9 @@ describe('reading stored data', () => {
     ]);
     expect(page.database?.views.map((view) => view.id)).toEqual(['v1']);
     expect(page.database?.views[0]?.filters).toHaveLength(1);
+    expect(page.database?.views[0]?.columnOrder).toEqual(['status', 'title']);
+    expect(page.database?.views[0]?.groupDirection).toBe('desc');
+    expect(page.database?.views[0]?.collapsedGroups).toEqual(['null', '"opt1"']);
   });
 });
 

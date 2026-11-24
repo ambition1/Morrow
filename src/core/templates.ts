@@ -1,6 +1,6 @@
 // templates are the subpages of the templates page, a new page starts as a copy of one
 import { cloneDoc } from './doc';
-import type { DocNode, PageMeta, WorkspaceState } from './model';
+import type { DatabaseDef, DocNode, PageMeta, WorkspaceState } from './model';
 import { childrenOf, livePages } from './tree';
 
 export const TEMPLATES_TITLE = 'Templates';
@@ -9,6 +9,13 @@ export const DAILY_TEMPLATE_TITLE = 'Daily note';
 
 export function findTemplatesPage(state: WorkspaceState): PageMeta | null {
   return livePages(state.pages).find((page) => page.kind === 'templates' && page.parentId === null) ?? null;
+}
+
+/** 手动创建和定时创建共用模板的数据库结构，行记录由独立子页面承载。 */
+export function templateDatabaseFields(
+  page: PageMeta,
+): { kind: 'database'; database: DatabaseDef } | undefined {
+  if (page.kind === 'database' && page.database) return { kind: 'database', database: page.database };
 }
 
 export function listTemplates(state: WorkspaceState): PageMeta[] {

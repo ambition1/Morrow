@@ -10,6 +10,7 @@ import {
   databaseFromTable,
   defaultDatabase,
   groupRows,
+  valueForGroup,
   inferType,
   visibleRows,
 } from './database';
@@ -81,6 +82,25 @@ describe('databases', () => {
       ['Doing', ['Paint']],
       ['Done', ['Prune']],
     ]);
+  });
+
+  // 从任意支持的分组新建记录，都应立即归入该组。
+  it('组内新建的属性值能重新匹配原分组', () => {
+    // 覆盖单选、多选与复选框的分组值格式。
+    for (const type of ['select', 'multiSelect', 'checkbox'] as const) {
+      // 为各属性类型构建独立测试定义。
+      const prop = { ...status!, type };
+      // 单选与多选包含空值组，复选框覆盖两个布尔分组。
+      for (const key of type === 'checkbox' ? ['true', 'false'] : [todo!.id, null]) {
+        // 创建与实际界面相同属性格式的新记录。
+        const created = row('新记录', { [prop.id]: valueForGroup(prop, key) }, 0);
+        expect(
+          groupRows([created], prop.id, { ...database, properties: [prop] }).find(
+            (group) => group.key === key,
+          )?.rows,
+        ).toContain(created);
+      }
+    }
   });
 
   it('keeps values that make sense when a property changes type', () => {

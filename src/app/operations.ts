@@ -16,6 +16,7 @@ import { canvasDoc, emptyCanvas } from '../core/canvas';
 import type { Command } from '../core/commands';
 import { defaultDatabase } from '../core/database';
 import { displayTitle } from './i18n/labels';
+import { emptyDoc } from '../core/model';
 import type { FileId, FileMeta, PageId, PageKind, Snapshot } from '../core/model';
 import { databaseFromSubpages, fieldsForMove, releaseRow } from '../core/properties';
 import { buildSite } from '../core/site';
@@ -25,6 +26,7 @@ import {
   fillTemplate,
   findTemplatesPage,
   hasPlaceholder,
+  templateDatabaseFields,
   TEMPLATES_TITLE,
 } from '../core/templates';
 import {
@@ -279,9 +281,7 @@ export function createFromTemplate(templateId: PageId, parentId: PageId | null):
     icon: template.icon,
     tags: template.tags,
     doc,
-    ...(template.kind === 'database' && template.database
-      ? { kind: 'database' as const, database: template.database }
-      : {}),
+    ...templateDatabaseFields(template),
   });
   if (!result.ok) return null;
   expandPage(parentId);
@@ -292,6 +292,7 @@ export function createFromTemplate(templateId: PageId, parentId: PageId | null):
 
 // copies a page into the templates page so new pages can start from it
 export function saveAsTemplate(id: PageId): void {
+  commitEditors();
   const state = getState();
   const page = state.pages[id];
   if (!page) return;
@@ -306,7 +307,9 @@ export function saveAsTemplate(id: PageId): void {
     title: displayTitle(page),
     icon: page.icon,
     tags: page.tags,
-    doc: state.docs[id] ?? { type: 'doc', content: [{ type: 'paragraph' }] },
+    // 数据库模板保留表结构及视图，记录由子页面承载，无需复制。
+    ...templateDatabaseFields(page),
+    doc: page.kind === 'database' ? emptyDoc() : (state.docs[id] ?? emptyDoc()),
   });
   if (result.ok)
     toast(t('toasts.savedAsTemplate', { title: displayTitle(page) }), {

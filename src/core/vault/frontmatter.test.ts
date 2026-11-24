@@ -1,6 +1,9 @@
 import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
 import { parseSimple } from './frontmatter';
+import { newPageMeta } from '../model';
+import { defaultDatabase } from '../database';
+import { managedFrontmatter, readPageText, renderPageText } from './pageFile';
 
 // whenever the quick reader answers, it must read exactly what yaml itself reads
 const VALUES = [
@@ -124,4 +127,34 @@ describe('the quick frontmatter reader', () => {
       empty: null,
     });
   });
+});
+
+// 验证真实 Markdown 文件保存与重载不会丢失视图设置。
+it('Markdown 往返保留数据库列、分组、正文设置和扩展选项色', () => {
+  // 用固定序列生成数据库属性与视图编号。
+  let sequence = 0;
+  // 创建不接触实际笔记的数据库元数据。
+  const page = newPageMeta({ id: 'db', title: '数据库', parentId: null });
+  page.kind = 'database';
+  page.database = defaultDatabase(() => `id${++sequence}`);
+  // 当前视图设置包含名称列与空值分组。
+  const view = page.database.views[0]!;
+  view.columnOrder = [page.database.properties[0]!.id, 'title'];
+  view.groupBy = page.database.properties[0]!.id;
+  view.groupDirection = 'desc';
+  view.collapsedGroups = ['null', '"id2"'];
+  view.showBody = true;
+  view.columnOrder.push('$body');
+  page.database.properties[0]!.options[0]!.color = 'teal';
+  page.database.properties[0]!.options[1]!.color = '#1b946f';
+  // 通过正式写入与读取入口检查磁盘格式。
+  const text = renderPageText(Object.fromEntries(managedFrontmatter(page, '数据库', null)), null, '正文');
+  // 重新读取后的数据库定义用于恢复表格视图。
+  const database = readPageText(text).database;
+  expect(database?.views[0]).toMatchObject(view);
+  expect(database?.properties[0]?.options.map((option) => option.color)).toEqual([
+    'teal',
+    '#1B946F',
+    'green',
+  ]);
 });

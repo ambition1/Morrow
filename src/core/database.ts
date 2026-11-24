@@ -1,7 +1,7 @@
 // databases are pages whose subpages are rows, each row keeps its values in its frontmatter
-import { COLORS, displayTitle } from './model';
+import { OPTION_COLORS, displayTitle } from './model';
 import type {
-  ColorName,
+  OptionColor,
   DatabaseDef,
   FilterOp,
   FilterRule,
@@ -22,6 +22,8 @@ import { childrenOf } from './tree';
 
 // pseudo properties every row has
 export const TITLE_PROP = 'title';
+// 正文列使用保留标识，避免与可保存的用户属性 ID 冲突。
+export const BODY_COLUMN = '$body';
 export const CREATED_PROP = 'created';
 export const UPDATED_PROP = 'updated';
 
@@ -49,7 +51,7 @@ export function filterOpsFor(type: PropType | 'title'): FilterOp[] {
 }
 
 export function newOption(name: string, index: number, newId: () => string): SelectOption {
-  return { id: newId(), name, color: COLORS[index % COLORS.length]! };
+  return { id: newId(), name, color: OPTION_COLORS[index % OPTION_COLORS.length]! };
 }
 
 export function newView(type: ViewType, database: DatabaseDef, newId: () => string): ViewDef {
@@ -75,7 +77,7 @@ export function defaultDatabase(newId: () => string): DatabaseDef {
     options: ['To do', 'Doing', 'Done'].map((name, index) => ({
       id: newId(),
       name,
-      color: (['gray', 'blue', 'green'] as ColorName[])[index]!,
+      color: (['gray', 'blue', 'green'] as OptionColor[])[index]!,
     })),
   };
   const date: PropDef = { id: newId(), name: 'Date', type: 'date', options: [] };
@@ -255,7 +257,7 @@ export interface RowGroup {
   // the option id, or null for rows without a value
   key: string | null;
   label: string;
-  color: ColorName;
+  color: OptionColor;
   rows: PageMeta[];
 }
 
@@ -296,6 +298,13 @@ export function groupRows(rows: PageMeta[], propId: string | null, database: Dat
     else for (const group of matched) group.rows.push(row);
   }
   return groups;
+}
+
+// 将分组键转换为新记录的属性值，兼容单选、多选、复选框与空值组。
+export function valueForGroup(prop: PropDef, key: string | null): PropValue {
+  if (prop.type === 'checkbox') return key === 'true';
+  if (key === null) return null;
+  return prop.type === 'multiSelect' ? [key] : key;
 }
 
 // keeps what still makes sense when a property changes type

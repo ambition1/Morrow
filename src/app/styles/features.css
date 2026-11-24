@@ -624,7 +624,9 @@ textarea.text-input.small {
   align-items: center;
   gap: 6px;
 }
-.db-rule > .text-input {
+.db-rule > .text-input,
+.db-rule > .select-button,
+.db-rule > .db-date-trigger {
   flex: 1;
   min-width: 0;
 }
@@ -2587,4 +2589,44 @@ td:hover .prop-empty,
 /* 历史正文预览使用实色阅读表面，玻璃只留在弹层外壳。 */
 .history-dialog .history-preview {
   background: var(--surface);
+}
+
+/* 数据库额外选项色沿用实色色样，用深底和浅字保持明暗主题中的辨识度。 */
+:root {
+  --solid-slate: #475569;
+  --solid-amber: #854d0e;
+  --solid-lime: #486618;
+  --solid-teal: #117269;
+  --solid-cyan: #156c82;
+  --solid-indigo: #4b53ac;
+  --solid-violet: #764397;
+  --solid-rose: #ad365b;
+  --solid-burgundy: #782741;
+}
+:is(.chip, .db-column).color-slate {
+  --solid: var(--solid-slate);
+}
+:is(.chip, .db-column).color-amber {
+  --solid: var(--solid-amber);
+}
+:is(.chip, .db-column).color-lime {
+  --solid: var(--solid-lime);
+}
+:is(.chip, .db-column).color-teal {
+  --solid: var(--solid-teal);
+}
+:is(.chip, .db-column).color-cyan {
+  --solid: var(--solid-cyan);
+}
+:is(.chip, .db-column).color-indigo {
+  --solid: var(--solid-indigo);
+}
+:is(.chip, .db-column).color-violet {
+  --solid: var(--solid-violet);
+}
+:is(.chip, .db-column).color-rose {
+  --solid: var(--solid-rose);
+}
+:is(.chip, .db-column).color-burgundy {
+  --solid: var(--solid-burgundy);
 }
