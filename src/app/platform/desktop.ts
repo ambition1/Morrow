@@ -220,7 +220,25 @@ export async function copyText(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
+    // 局域网 HTTP 没有 Clipboard API，继续使用用户点击触发的传统复制流程。
+  }
+  /** 暂存焦点，复制完成后恢复用户正在编辑的控件。 */
+  const focused = document.activeElement;
+  /** 临时只读文本框供浏览器选择和复制，不遮挡当前页面。 */
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.readOnly = true;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  try {
+    input.select();
+    return document.execCommand('copy');
+  } catch {
     return false;
+  } finally {
+    input.remove();
+    if (focused instanceof HTMLElement) focused.focus({ preventScroll: true });
   }
 }
 
