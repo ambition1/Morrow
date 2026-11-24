@@ -7,10 +7,7 @@ import { createHash } from 'node:crypto';
 import { chmod, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-// 此发行版的安装包与更新信息由同一个 GitHub 仓库提供。
-const RELEASE_REPO = 'ambition1/Morrow';
-// GitHub 的发布接口返回当前受支持的正式版本。
-const LATEST = `https://api.github.com/repos/${RELEASE_REPO}/releases/latest`;
+const LATEST = 'https://api.github.com/repos/Aarav2709/Morrow/releases/latest';
 
 export interface UpdateInfo {
   version: string;
@@ -80,7 +77,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
   const info: UpdateInfo = {
     version,
     notes: (release.body ?? '').slice(0, 8000),
-    url: String(release.html_url ?? `https://github.com/${RELEASE_REPO}/releases/latest`),
+    url: String(release.html_url ?? 'https://github.com/Aarav2709/Morrow/releases/latest'),
     installable: asset !== null,
   };
   latest = { info, asset };
