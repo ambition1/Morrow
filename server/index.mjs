@@ -15,8 +15,12 @@ const dataDir = process.env.MORROW_DATA_DIR ?? path.join(here, '../data');
 const host = process.env.MORROW_HOST ?? '127.0.0.1';
 /** 服务端口，可由容器或部署环境覆盖。 */
 const port = Number(process.env.PORT ?? 3000);
+/** 只有显式启用时才加载 MCP，普通 Web 开发无需构建 MCP。 */
+const mcpHandler = ['1', 'true'].includes(process.env.MORROW_MCP_ENABLED)
+  ? (await import('../dist-mcp/web.js')).handleMcp
+  : undefined;
 /** 服务创建过程先完成共享库初始化和旧数据迁移。 */
-const server = await createApp({ dataDir, distDir: path.join(here, '../dist') });
+const server = await createApp({ dataDir, distDir: path.join(here, '../dist'), mcpHandler });
 server.listen(port, host, () => console.log(`Morrow Web 已启动：http://${host}:${port}`));
 /** 收到终止信号后等待正在保存的请求完成。 */
 const shutdown = () => server.close(() => process.exit(0));

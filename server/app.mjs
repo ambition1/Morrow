@@ -198,7 +198,7 @@ async function body(request, limit = MAX_BODY) {
 }
 
 /** 创建可测试的共享 HTTP 服务，所有设备访问同一笔记库。 */
-export async function createApp({ dataDir, distDir }) {
+export async function createApp({ dataDir, distDir, mcpHandler }) {
   /** 规范化的数据根目录，仅由部署环境配置。 */
   const dataRoot = path.resolve(dataDir);
   /** 静态构建目录，不能与数据目录混用。 */
@@ -253,6 +253,8 @@ export async function createApp({ dataDir, distDir }) {
         request.headers['sec-fetch-site'] === 'cross-site')
     )
       throw failure(403, '禁止跨站请求。');
+    /** MCP 复用同源检查，工具写入再进入现有 API 的串行保存队列。 */
+    if (url.pathname === '/mcp' && mcpHandler) return mcpHandler(request, response);
     // 健康检查只返回状态，不暴露文件路径或笔记内容。
     if (url.pathname === '/api/health' && request.method === 'GET') {
       try {
@@ -383,7 +385,7 @@ export async function createApp({ dataDir, distDir }) {
     response.end(request.method === 'HEAD' ? undefined : content);
   }
   /** HTTP 服务统一处理错误，不暴露服务器路径和调用栈。 */
-  return http.createServer((request, response) => {
+  const server = http.createServer((request, response) => {
     void handle(request, response).catch((error) => {
       if (response.headersSent) return response.destroy();
       json(response, error.status ?? 500, {
@@ -392,4 +394,5 @@ export async function createApp({ dataDir, distDir }) {
       if (!error.status) console.error(error);
     });
   });
+  return server;
 }

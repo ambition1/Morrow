@@ -8,9 +8,12 @@ export default defineConfig({
     outDir: 'dist-mcp',
     emptyOutDir: true,
     rollupOptions: {
-      input: path.resolve(import.meta.dirname, 'src/mcp/index.ts'),
+      input: {
+        index: path.resolve(import.meta.dirname, 'src/mcp/index.ts'),
+        web: path.resolve(import.meta.dirname, 'src/mcp/web.ts'),
+      },
       output: {
-        entryFileNames: 'index.js',
+        entryFileNames: '[name].js',
         format: 'es',
         banner: '#!/usr/bin/env node\n',
       },
