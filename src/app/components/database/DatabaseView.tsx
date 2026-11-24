@@ -26,7 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { dateKey } from '../../../core/daily';
 import {
@@ -895,6 +895,61 @@ function PropertyTypeIcon({ prop }: { prop: PropDef }) {
 }
 
 function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
+  // 保留原生表头及其操作，只同步页面滚动产生的纵向吸顶距离。
+  const tableHeaderRef = useRef<HTMLTableSectionElement>(null);
+  useLayoutEffect(() => {
+    // 表头所在的表格负责横向滚动，外层页面负责纵向滚动。
+    const tableHeader = tableHeaderRef.current;
+    // 使用表格的原始位置作为吸顶计算的基准。
+    const table = tableHeader?.closest('table');
+    // 独立数据库和笔记内嵌数据库共用所在窗格的滚动区域。
+    const pageScroll = table?.closest('.page-scroll');
+    if (!tableHeader || !table || !pageScroll) return;
+
+    // 用未偏移的表格上沿计算距离，吸顶行为由 CSS 限制在表格内。
+    const updateHeaderOffset = () => {
+      // 内容区的可视上沿位于滚动容器的边框内侧。
+      const pageTop = pageScroll.getBoundingClientRect().top + pageScroll.clientTop;
+      // 表格上沿滚出内容区后，补偿页面与表格之间的纵向距离。
+      const offset = Math.max(0, pageTop - table.getBoundingClientRect().top);
+      tableHeader.style.setProperty('--db-header-offset', `${offset}px`);
+    };
+
+    // 原生焦点滚动无法识别吸顶遮挡，必要时把焦点控件移到表头下方。
+    const revealFocusedCell = (event: FocusEvent) => {
+      // 仅处理当前表格的数据行控件。
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || target.closest('tbody')?.parentElement !== table) return;
+      // 先同步焦点变更可能触发的页面滚动。
+      updateHeaderOffset();
+      // 用表头的可视范围判断是否挡住了焦点控件。
+      const header = tableHeader.getBoundingClientRect();
+      // 焦点控件在页面中的可视位置。
+      const focused = target.getBoundingClientRect();
+      if (focused.top < header.bottom && focused.bottom > header.top) {
+        // 表格末尾的表头可能已滚出一部分，仍按完整高度预留空间。
+        const pageTop = pageScroll.getBoundingClientRect().top + pageScroll.clientTop;
+        pageScroll.scrollTop -= pageTop + header.height - focused.top;
+        updateHeaderOffset();
+      }
+    };
+
+    // 页面重排或表格尺寸变化时，即使没有滚动也要重新定位。
+    const observer = new ResizeObserver(updateHeaderOffset);
+    observer.observe(pageScroll);
+    observer.observe(table);
+    // 页面标题、封面或正文的高度变化也可能移动表格。
+    const article = table.closest('article');
+    if (article) observer.observe(article);
+    pageScroll.addEventListener('scroll', updateHeaderOffset, { passive: true });
+    table.addEventListener('focusin', revealFocusedCell);
+    updateHeaderOffset();
+    return () => {
+      observer.disconnect();
+      pageScroll.removeEventListener('scroll', updateHeaderOffset);
+      table.removeEventListener('focusin', revealFocusedCell);
+    };
+  }, []);
   // 正文列和自定义属性复用表头的打开状态。
   const [header, setHeader] = useState<{ prop: PropDef | null; anchor: HTMLElement } | null>(null);
   const [adding, setAdding] = useState<HTMLElement | null>(null);
@@ -985,7 +1040,7 @@ function TableView({ dbId, database, view, rows, props, editable }: ViewProps) {
           ))}
           {editable && <col />}
         </colgroup>
-        <thead>
+        <thead ref={tableHeaderRef}>
           <tr>
             <th scope="col" className="db-row-number" aria-label={t('database.rowNumber')}>
               #

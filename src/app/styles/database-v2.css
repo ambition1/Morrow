@@ -60,7 +60,7 @@
   border-radius: var(--radius);
   background: var(--surface);
 }
-.database-v2 .db-table th {
+.database-v2 .db-table-wrap .db-table thead th {
   height: 42px;
   font-size: var(--text-sm);
   background: var(--bg-sidebar);
@@ -260,6 +260,12 @@
   --db-title-width: min(var(--db-saved-title-width), max(116px, 56cqw));
   border-collapse: separate;
   border-spacing: 0;
+}
+/* 让整行表头盖住数据行，序号和名称仍可在表头内部横向吸附。 */
+.database-v2 .db-table thead {
+  position: sticky;
+  top: var(--db-header-offset, 0px);
+  z-index: 3;
 }
 .database-v2 .db-table .db-row-number,
 .database-v2 .db-table .db-col-title {
