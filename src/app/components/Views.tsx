@@ -1,13 +1,11 @@
-import { CheckSquare, RotateCcw, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { RotateCcw, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
 import { displayTitle } from '../i18n/labels';
 import type { PageId, WorkspaceState } from '../../core/model';
-import { collectTasks } from '../../core/tasks';
-import type { TaskRef } from '../../core/tasks';
 import { ancestorsOf, trashedPages } from '../../core/tree';
 import { deleteForever, emptyTrash, restorePage } from '../operations';
 import { openPage } from '../router';
-import { run, useWorkspace } from '../workspace';
+import { useWorkspace } from '../workspace';
 import { relativeTime, useShowMore } from './primitives';
 import { PageIcon } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -18,138 +16,6 @@ function pathOf(state: WorkspaceState, id: PageId): string {
     .reverse()
     .map((page) => displayTitle(page))
     .join(' / ');
-}
-
-export function TaskList({
-  tasks,
-  state,
-  grouped = false,
-}: {
-  tasks: TaskRef[];
-  state: WorkspaceState;
-  grouped?: boolean;
-}) {
-  const groups = useMemo(() => {
-    const map = new Map<PageId, TaskRef[]>();
-    for (const task of tasks) {
-      const list = map.get(task.pageId);
-      if (list) list.push(task);
-      else map.set(task.pageId, [task]);
-    }
-    return [...map.entries()];
-  }, [tasks]);
-  const flat = useShowMore(tasks, 100);
-  const pages = useShowMore(groups, 40);
-
-  const row = (task: TaskRef, showPage: boolean) => (
-    <li key={`${task.pageId}:${task.index}`} className={`task-row${task.checked ? ' is-done' : ''}`}>
-      <label className="task-check">
-        <input
-          type="checkbox"
-          checked={task.checked}
-          onChange={(event) =>
-            run({
-              type: 'task.setChecked',
-              pageId: task.pageId,
-              index: task.index,
-              checked: event.target.checked,
-              now: Date.now(),
-            })
-          }
-          aria-label={task.text || t('tasks.untitledTask')}
-        />
-      </label>
-      <button type="button" className="task-text" onClick={() => openPage(task.pageId, task.text || null)}>
-        {task.text || <span className="muted">{t('tasks.untitledTask')}</span>}
-      </button>
-      {showPage && <span className="task-page">{displayTitle(state.pages[task.pageId])}</span>}
-    </li>
-  );
-
-  if (!grouped)
-    return (
-      <>
-        <ul className="task-list">{flat.shown.map((task) => row(task, true))}</ul>
-        {flat.more}
-      </>
-    );
-  return (
-    <div className="task-groups">
-      {pages.shown.map(([pageId, items]) => (
-        <section key={pageId} className="task-group">
-          <button type="button" className="task-group-title" onClick={() => openPage(pageId)}>
-            {displayTitle(state.pages[pageId])}
-            <span className="section-count">{items.length}</span>
-          </button>
-          <ul className="task-list">{items.map((task) => row(task, false))}</ul>
-        </section>
-      ))}
-      {pages.more}
-    </div>
-  );
-}
-
-type TaskFilter = 'open' | 'done' | 'all';
-
-export function TasksView() {
-  const state = useWorkspace();
-  const [filter, setFilter] = useState<TaskFilter>('open');
-  const all = useMemo(() => collectTasks(state), [state]);
-  const shown = all.filter((task) =>
-    filter === 'all' ? true : filter === 'open' ? !task.checked : task.checked,
-  );
-  const openCount = all.filter((task) => !task.checked).length;
-
-  return (
-    <div className="view collection-view tasks-view">
-      <TopBar>
-        <span className="topbar-title">{t('tasks.title')}</span>
-      </TopBar>
-      <div className="page-scroll">
-        <div className="collection">
-          <header className="collection-header">
-            <span className="collection-symbol" aria-hidden="true">
-              <CheckSquare size={22} strokeWidth={1.5} />
-            </span>
-            <h1>{t('tasks.title')}</h1>
-            <p className="muted">{t('tasks.subtitle')}</p>
-            <div className="segmented" role="radiogroup" aria-label={t('tasks.showAria')}>
-              {(['open', 'done', 'all'] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={filter === value}
-                  className={filter === value ? 'is-active' : ''}
-                  onClick={() => setFilter(value)}
-                >
-                  {value === 'open'
-                    ? t('tasks.filterOpen', { count: openCount })
-                    : value === 'done'
-                      ? t('tasks.filterDone', { count: all.length - openCount })
-                      : t('tasks.filterAll', { count: all.length })}
-                </button>
-              ))}
-            </div>
-          </header>
-          {shown.length === 0 ? (
-            <div className="empty-state compact">
-              <CheckSquare size={24} strokeWidth={1.5} />
-              <p>
-                {all.length === 0
-                  ? t('tasks.emptyAll')
-                  : filter === 'open'
-                    ? t('tasks.emptyOpen')
-                    : t('tasks.emptyDone')}
-              </p>
-            </div>
-          ) : (
-            <TaskList tasks={shown} state={state} grouped />
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function TrashView() {

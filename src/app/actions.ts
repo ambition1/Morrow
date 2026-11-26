@@ -4,7 +4,6 @@ import {
   Columns2,
   PanelRightClose,
   CalendarDays,
-  CheckSquare,
   Copy,
   Download,
   FileDown,
@@ -257,14 +256,6 @@ export const ACTIONS: Action[] = [
     icon: Home,
     shortcut: 'Alt+H',
     run: () => navigate({ name: 'home' }),
-  },
-  {
-    id: 'go.tasks',
-    label: 'Go to tasks',
-    group: 'General',
-    icon: CheckSquare,
-    keywords: 'todo checklist',
-    run: () => navigate({ name: 'tasks' }),
   },
   {
     id: 'go.trash',

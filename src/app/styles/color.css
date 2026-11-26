@@ -564,7 +564,7 @@
 }
 .home-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 24px 0 32px;
 }
@@ -591,9 +591,6 @@
 }
 .home-stat svg {
   margin-bottom: 4px;
-}
-button.home-stat:hover {
-  filter: brightness(0.97);
 }
 .home-cards {
   display: grid;

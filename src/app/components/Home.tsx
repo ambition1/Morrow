@@ -1,16 +1,5 @@
-import {
-  ArrowUpRight,
-  CalendarDays,
-  CircleCheckBig,
-  FileText,
-  FileUp,
-  Flame,
-  PenLine,
-  Plus,
-  Shuffle,
-} from 'lucide-react';
+import { ArrowUpRight, CalendarDays, FileText, FileUp, Flame, PenLine, Plus, Shuffle } from 'lucide-react';
 import { useMemo } from 'react';
-import { collectTasks } from '../../core/tasks';
 import { activityWeeks, dayLabel, onThisDay, rediscover, streak, totalWords } from '../../core/insights';
 import { docToPlainText } from '../../core/doc';
 import { displayTitle } from '../i18n/labels';
@@ -18,7 +7,7 @@ import type { PageMeta, WorkspaceState } from '../../core/model';
 import { ancestorsOf, livePages } from '../../core/tree';
 import { createPage, importMarkdown, openToday } from '../operations';
 import { usePreferences } from '../platform/preferences';
-import { navigate, openPage } from '../router';
+import { openPage } from '../router';
 import { getSession, useWorkspace } from '../workspace';
 import { useCover } from './Cover';
 import { dateLocale, tp, useTranslation } from '../i18n';
@@ -26,14 +15,12 @@ import type { TranslationKey } from '../i18n';
 import { relativeTime } from './primitives';
 import { PageIcon } from './Sidebar';
 import { TopBar } from './TopBar';
-import { TaskList } from './Views';
 
 // figures for the home page, worked out once for each version of the workspace
 const factsCache = new WeakMap<WorkspaceState, ReturnType<typeof computeFacts>>();
 function computeFacts(state: WorkspaceState) {
   const today = new Date();
   return {
-    openTasks: collectTasks(state).filter((task) => !task.checked),
     words: totalWords(state),
     memories: onThisDay(state, today),
     again: rediscover(state, today),
@@ -154,7 +141,7 @@ export function HomeView() {
         .slice(0, 6),
     [live],
   );
-  const { openTasks, words, memories, again } = factsOf(state);
+  const { words, memories, again } = factsOf(state);
   // read on every render, the workspace changing rerenders this view so the chart follows writing as it happens
   const activity = getSession().activity();
   const days = streak(activity, now);
@@ -202,11 +189,6 @@ export function HomeView() {
               <strong>{words.toLocaleString()}</strong>
               <span>{words === 1 ? t('home.wordSingle') : t('home.wordPlural')}</span>
             </div>
-            <button type="button" className="home-stat" onClick={() => navigate({ name: 'tasks' })}>
-              <CircleCheckBig size={18} />
-              <strong>{openTasks.length}</strong>
-              <span>{openTasks.length === 1 ? t('home.openTaskSingle') : t('home.openTaskPlural')}</span>
-            </button>
           </div>
 
           {live.length === 0 ? (
@@ -272,15 +254,6 @@ export function HomeView() {
                 </section>
               )}
             </div>
-          )}
-
-          {openTasks.length > 0 && (
-            <section className="home-section" aria-labelledby="tasks-heading">
-              <h2 id="tasks-heading" className="section-label">
-                {t('home.openTasks')} <span className="section-count">{openTasks.length}</span>
-              </h2>
-              <TaskList tasks={openTasks.slice(0, 6)} state={state} />
-            </section>
           )}
         </div>
       </div>

@@ -73,7 +73,7 @@ https://github.com/user-attachments/assets/a279710f-1a50-4f1a-82ff-17714cfe7641
   template
 - **Daily notes** first: Morrow opens on today's note (or home, or where you
   left off), with the notes either side, a calendar of every day, and the pages
-  you made that day listed under it. A Tasks view gathers every checklist item
+  you made that day listed under it. Add and tick off checklist items in any note
 - **Search** across every page from the command palette, or in a full view with
   every match: `"exact phrases"`, `-word` to leave pages out and `#tag` filters
 - **Vaults**: open any folder, switch between folders, keep work and home apart

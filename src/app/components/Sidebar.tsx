@@ -1,7 +1,6 @@
 import {
   BookOpen,
   CalendarDays,
-  CheckSquare,
   ChevronDown,
   ChevronRight,
   FileText,
@@ -31,7 +30,6 @@ import { groupJournalPages } from '../../core/journalGroups';
 import { inlineDateCalendarDate } from '../../core/inlineDate';
 import { displayTitle } from '../i18n/labels';
 import type { PageId, PageMeta, WorkspaceState } from '../../core/model';
-import { collectTasks } from '../../core/tasks';
 import {
   ancestorsOf,
   childrenOf,
@@ -153,7 +151,6 @@ export function Sidebar() {
     [live],
   );
   const trashCount = useMemo(() => trashedPages(state.pages).length, [state.pages]);
-  const openTasks = useMemo(() => collectTasks(state).filter((task) => !task.checked).length, [state]);
   /** 更多功能菜单定位到点击入口，靠近侧栏展示。 */
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   // 快捷键可从菜单中直接打开搜索，命令面板接管焦点。
@@ -251,13 +248,6 @@ export function Sidebar() {
           label={t('sidebar.today')}
           active={isToday}
           onClick={go(() => openToday())}
-        />
-        <NavItem
-          icon={CheckSquare}
-          label={t('sidebar.tasks')}
-          active={route.name === 'tasks'}
-          count={openTasks}
-          onClick={go(() => navigate({ name: 'tasks' }))}
         />
         <NavItem
           icon={MoreHorizontal}

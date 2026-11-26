@@ -390,7 +390,6 @@ kbd,
 .tree-group,
 .flat-list,
 .link-list,
-.task-list,
 .move-list {
   list-style: none;
   margin: 0;
@@ -1113,65 +1112,6 @@ button.crumb:hover {
   display: flex;
   gap: 6px;
   flex: none;
-}
-
-.task-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.task-group-title {
-  font-weight: 600;
-  font-size: var(--text-md);
-  margin-bottom: 4px;
-  padding: 2px 0;
-}
-
-.task-group-title:hover {
-  color: var(--accent-strong);
-}
-
-.task-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 32px;
-}
-
-.task-check {
-  display: grid;
-  place-items: center;
-  width: 20px;
-}
-
-.task-text {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  font-family: var(--font-ui);
-  font-size: 16px;
-  padding: 3px 0;
-}
-
-.task-text:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--border-strong);
-  text-underline-offset: 3px;
-}
-
-.task-row.is-done .task-text {
-  color: var(--text-faint);
-  text-decoration: line-through;
-}
-
-.task-page {
-  color: var(--text-faint);
-  font-size: var(--text-sm);
-  max-width: 40%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 input[type='checkbox'] {

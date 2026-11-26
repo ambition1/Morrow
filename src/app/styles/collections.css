@@ -135,11 +135,6 @@
   opacity: 1;
 }
 
-.home-view button.home-stat:hover {
-  color: var(--accent-strong);
-  filter: none;
-}
-
 .home-view .section-label {
   font-size: var(--text-ui);
   letter-spacing: 0;
@@ -295,36 +290,6 @@
   font-variant-numeric: tabular-nums;
   color: inherit;
   opacity: 0.8;
-}
-
-/* 任务保留可直接勾选的列表，分组名称与任务数量并列呈现。 */
-.collection-view .task-groups {
-  gap: 28px;
-}
-
-.collection-view .task-group-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-block: 4px;
-  margin-bottom: 8px;
-  text-align: left;
-}
-
-.collection-view .task-row {
-  min-height: 44px;
-  border-bottom: 1px solid var(--border);
-}
-
-.collection-view .task-text {
-  font-size: var(--text-md);
-  line-height: 1.65;
-  overflow-wrap: anywhere;
-}
-
-.collection-view .task-check {
-  min-width: 32px;
-  min-height: 40px;
 }
 
 .collection-view .trash-row {

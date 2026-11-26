@@ -13,7 +13,7 @@ import { Toasts } from './components/primitives';
 import { SearchView } from './components/SearchView';
 import { Sidebar } from './components/Sidebar';
 import { HomeView } from './components/Home';
-import { TasksView, TrashView } from './components/Views';
+import { TrashView } from './components/Views';
 import { commitEditors, undoRedo } from './editor/commits';
 import { ensureToday, writeAutoBackup } from './operations';
 import { startAutoSync, syncWith } from './sync';
@@ -169,8 +169,6 @@ function viewFor(route: Route) {
   switch (route.name) {
     case 'page':
       return <PageView key={route.id} id={route.id} find={route.find} anchor={route.anchor ?? null} />;
-    case 'tasks':
-      return <TasksView />;
     case 'trash':
       return <TrashView />;
     case 'tags':

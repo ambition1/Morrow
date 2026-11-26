@@ -14,7 +14,6 @@ export type Route =
   | { name: 'home' }
   // anchor is a heading or ^block id to scroll to once the page opens
   | { name: 'page'; id: PageId; find: string | null; anchor?: string | null }
-  | { name: 'tasks' }
   | { name: 'trash' }
   | { name: 'tags' }
   | { name: 'tag'; tag: string }
@@ -30,7 +29,6 @@ export function parseRoute(hash: string): Route {
     const anchor = params.get('anchor');
     return { name: 'page', id: decodeURIComponent(parts[1]), find: find || null, anchor: anchor || null };
   }
-  if (parts[0] === 'tasks') return { name: 'tasks' };
   if (parts[0] === 'trash') return { name: 'trash' };
   if (parts[0] === 'tags' && parts[1])
     return { name: 'tag', tag: decodeURIComponent(parts.slice(1).join('/')) };
@@ -49,8 +47,6 @@ export function routeHash(route: Route): string {
       const query = params.toString();
       return `#/page/${encodeURIComponent(route.id)}${query ? `?${query}` : ''}`;
     }
-    case 'tasks':
-      return '#/tasks';
     case 'trash':
       return '#/trash';
     case 'tags':

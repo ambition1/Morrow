@@ -80,7 +80,7 @@ export function chineseSampleCommands(newId: () => string, now: number): Command
 
 左侧“今天”会打开今日笔记。日历可查看其他日期，页面下方会列出当天创建的页面。
 
-“任务”汇总所有页面的任务清单，在任务视图勾选也会更新原页面。
+你可以在笔记里添加任务清单，并在原页面勾选完成。
 
 ## 模板
 

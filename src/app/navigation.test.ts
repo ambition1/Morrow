@@ -53,7 +53,7 @@ describe('单工作区导航', () => {
   });
   it('导航只保存当前位置，不累计前后历史', () => {
     stop = navigation.startNavigation();
-    navigation.showInMain('#/tasks');
+    navigation.showInMain('#/trash');
     settleHash();
     navigation.showInMain('#/tags');
     settleHash();
@@ -64,12 +64,12 @@ describe('单工作区导航', () => {
     navigation.showInMain('#/page/main', true);
     expect(navigation.getNavigation().main.hash).toBe('#/page/main');
     navigation.openSide('#/page/side');
-    navigation.showInSide('#/tasks');
-    expect(navigation.activeHash()).toBe('#/tasks');
+    navigation.showInSide('#/trash');
+    expect(navigation.activeHash()).toBe('#/trash');
     expect(browser.location.hash).toBe('#/page/main');
     navigation.swapSides();
     settleHash();
-    expect(browser.location.hash).toBe('#/tasks');
+    expect(browser.location.hash).toBe('#/trash');
     expect(navigation.getNavigation().main.side?.hash).toBe('#/page/main');
     navigation.closeSide();
     expect(navigation.targetPane()).toBe('main');
@@ -77,14 +77,14 @@ describe('单工作区导航', () => {
   });
   it('刷新恢复导航位置及分栏，不恢复多标签列表', async () => {
     stop = navigation.startNavigation();
-    navigation.showInMain('#/tasks');
+    navigation.showInMain('#/trash');
     settleHash();
     navigation.openSide('#/page/side');
     stop();
     vi.resetModules();
     navigation = await import('./navigation');
     stop = navigation.startNavigation();
-    expect(navigation.getNavigation().main.hash).toBe('#/tasks');
+    expect(navigation.getNavigation().main.hash).toBe('#/trash');
     expect(navigation.activeHash()).toBe('#/page/side');
     expect(navigation.getNavigation()).not.toHaveProperty('tabs');
   });

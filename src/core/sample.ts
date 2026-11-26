@@ -618,9 +618,7 @@ export function sampleCommands(newId: () => PageId, now: number): Command[] {
         ),
         h(1, 'Tasks'),
         p(
-          'Any checklist item on any page is a task. ',
-          b('Tasks'),
-          ' in the sidebar gathers every open one, grouped by page. Give a task a date with ',
+          'Add a checklist to any page and tick off items as you go. Give an item a date with ',
           k('@'),
           ':',
         ),
